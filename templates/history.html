@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Prediction History — Heartfy{% endblock %}
+
+{% block content %}
+<style>
+    .confidence-track {
+        background: #E2E8F0;
+        border-radius: 4px;
+        height: 8px;
+        width: 80px;
+    }
+    .confidence-fill {
+        width: var(--c-width, 0%);
+        background: var(--c-bg, #38A169);
+        height: 8px;
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+</style>
+
+<div class="page-header">
+    <h4><i class="bi bi-clock-history me-2" style="color:var(--primary);"></i>Prediction History</h4>
+    <p>All past CHD risk predictions made by you</p>
+</div>
+
+<div class="card p-4">
+    {% if records %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="p-3 rounded-3 text-center" style="background:var(--soft-bg);">
+                <h5 class="fw-bold mb-0">{{ records|length }}</h5>
+                <p class="text-muted small mb-0">Total Predictions</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 rounded-3 text-center" style="background:#C6F6D5;">
+                <h5 class="fw-bold mb-0" style="color:#276749;">
+                    {{ records|selectattr('prediction_outcome', 'equalto', 0)|list|length }}
+                </h5>
+                <p class="small mb-0" style="color:#276749;">Low Risk</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 rounded-3 text-center" style="background:#FEFCBF;">
+                <h5 class="fw-bold mb-0" style="color:#744210;">
+                    {{ records|selectattr('prediction_outcome', 'equalto', 1)|list|length }}
+                </h5>
+                <p class="small mb-0" style="color:#744210;">Moderate Risk</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 rounded-3 text-center" style="background:#FED7D7;">
+                <h5 class="fw-bold mb-0" style="color:#822727;">
+                    {{ records|selectattr('prediction_outcome', 'equalto', 2)|list|length }}
+                </h5>
+                <p class="small mb-0" style="color:#822727;">High Risk</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Patient</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>CHD Risk</th>
+                    <th>Confidence</th>
+                    <th>Date & Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ r.name }}</td>
+                    <td>{{ r.age }}</td>
+                    <td>
+                        {{ 'Male' if r.gender == 0 else 'Female' }}
+                    </td>
+                    <td>
+                        {% if r.prediction_outcome == 0 %}
+                            <span class="badge-low">Low Risk</span>
+                        {% elif r.prediction_outcome == 1 %}
+                            <span class="badge-moderate">Moderate Risk</span>
+                        {% elif r.prediction_outcome == 2 %}
+                            <span class="badge-high">High Risk</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if r.confidence %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="confidence-track">
+                                    <div class="confidence-fill" style="--c-width: {{ r.confidence }}%; --c-bg: {% if r.prediction_outcome == 0 %}#38A169{% elif r.prediction_outcome == 1 %}#D69E2E{% else %}#E53E3E{% endif %};"></div>
+                                </div>
+                                <span class="fw-semibold small">
+                                    {{ r.confidence }}%
+                                </span>
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">
+                        {{ r.prediction_date.strftime('%d %b %Y, %I:%M %p') }}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('patient.view_prediction',
+                                    prediction_id=r.prediction_id) }}"
+                            class="btn btn-outline-primary btn-sm"
+                            title="View Result">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a href="{{ url_for('patient.download_pdf',
+                                    prediction_id=r.prediction_id) }}"
+                            class="btn btn-outline-success btn-sm"
+                            title="Download PDF Report">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-clock-history" style="font-size:3rem;color:var(--border);"></i>
+        <p class="text-muted mt-3 mb-3">No predictions made yet.</p>
+        <a href="{{ url_for('patient.new_patient') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-2"></i>Add a Patient
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

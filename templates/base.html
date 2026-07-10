@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Heartfy{% endblock %}</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+
+    <style>
+        :root {
+            --primary:        #4A90D9;
+            --primary-light:  #EBF4FF;
+            --accent:         #5BBFBA;
+            --soft-bg:        #F7FAFC;
+            --card-bg:        #FFFFFF;
+            --text-dark:      #2D3748;
+            --text-muted:     #718096;
+            --border:         #E2E8F0;
+            --sidebar-width:  240px;
+            --sidebar-collapsed: 68px;
+            --danger:         #E53E3E;
+            --success:        #38A169;
+        }
+
+        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
+        body {
+            background-color: var(--soft-bg);
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+        /* ==============================
+           SIDEBAR
+        ============================== */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+            transition: width 0.25s ease;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed);
+        }
+
+        /* Brand */
+        .sidebar-brand {
+            padding: 20px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 72px;
+            white-space: nowrap;
+        }
+
+        .sidebar-brand .brand-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .sidebar-brand .brand-icon {
+            font-size: 1.4rem;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand .brand-text h5 {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-brand .brand-text p {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            margin: 0;
+        }
+
+        .sidebar-brand .brand-text,
+        .sidebar-label-text,
+        .sidebar-link span,
+        .user-info {
+            transition: opacity 0.2s ease, width 0.2s ease;
+            opacity: 1;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .sidebar-label-text,
+        .sidebar.collapsed .sidebar-link span,
+        .sidebar.collapsed .user-info {
+            opacity: 0;
+            width: 0;
+        }
+
+        .sidebar.collapsed .sidebar-label {
+            border-top: 1px solid var(--border);
+            margin-top: 4px;
+            padding: 4px 0;
+        }
+
+        /* Toggle button */
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .sidebar-toggle:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Nav */
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 10px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 8px 10px 4px;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        .sidebar-link:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .sidebar-link.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-link i {
+            font-size: 1.05rem;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* Tooltip for collapsed state */
+        .sidebar.collapsed .sidebar-link {
+            justify-content: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        .sidebar.collapsed .sidebar-link:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: calc(var(--sidebar-collapsed) + 8px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--text-dark);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 200;
+            pointer-events: none;
+        }
+
+        /* Footer */
+        .sidebar-footer {
+            padding: 12px 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background-color: var(--soft-bg);
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .sidebar-user {
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .sidebar-user img {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-light);
+            flex-shrink: 0;
+        }
+
+        .user-info p {
+            margin: 0;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-info span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* ==============================
+           MAIN CONTENT
+        ============================== */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            padding: 32px;
+            background-color: var(--soft-bg);
+            transition: margin-left 0.25s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: var(--sidebar-collapsed);
+        }
+
+        /* ==============================
+           CARDS
+        ============================== */
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            background-color: var(--card-bg);
+        }
+
+        .stat-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        /* ==============================
+           BUTTONS
+        ============================== */
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background-color: #357ABD;
+            border-color: #357ABD;
+        }
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* ==============================
+           FORM CONTROLS
+        ============================== */
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+        }
+
+        /* ==============================
+           TABLE
+        ============================== */
+        .table th {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border);
+        }
+        .table td {
+            font-size: 0.88rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border);
+        }
+        .table tbody tr:hover {
+            background-color: var(--primary-light);
+        }
+
+        /* ==============================
+           PAGE HEADER
+        ============================== */
+        .page-header {
+            margin-bottom: 28px;
+        }
+        .page-header h4 {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin: 0;
+        }
+
+        /* ==============================
+           BADGES
+        ============================== */
+        .badge-low {
+            background-color: #C6F6D5;
+            color: #276749;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-moderate {
+            background-color: #FEFCBF;
+            color: #744210;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-high {
+            background-color: #FED7D7;
+            color: #822727;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .alert { border-radius: 10px; font-size: 0.9rem; }
+    </style>
+
+    {% block extra_styles %}{% endblock %}
+</head>
+
+<body>
+
+{% if current_user.is_authenticated %}
+
+<div class="sidebar" id="sidebar">
+
+    <div class="sidebar-brand">
+        <div class="brand-content">
+            <i class="bi bi-heart-pulse-fill brand-icon"></i>
+            <div class="brand-text">
+                <h5>Heartfy</h5>
+                <p>CHD Prediction System</p>
+            </div>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+            <i class="bi bi-layout-sidebar-reverse"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+
+        <div class="sidebar-label">
+            <span class="sidebar-label-text">Main</span>
+        </div>
+
+        <a href="{{ url_for('dashboard.home') }}"
+           class="sidebar-link {% if request.endpoint == 'dashboard.home' %}active{% endif %}"
+           data-tooltip="Dashboard">
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <div class="sidebar-label">
+            <span class="sidebar-label-text">Patients</span>
+        </div>
+
+        <a href="{{ url_for('patient.patient_list') }}"
+           class="sidebar-link {% if request.endpoint == 'patient.patient_list' %}active{% endif %}"
+           data-tooltip="Patient List">
+            <i class="bi bi-people-fill"></i>
+            <span>Patient List</span>
+        </a>
+
+        <a href="{{ url_for('patient.new_patient') }}"
+           class="sidebar-link {% if request.endpoint == 'patient.new_patient' %}active{% endif %}"
+           data-tooltip="New Patient">
+            <i class="bi bi-person-plus-fill"></i>
+            <span>New Patient</span>
+        </a>
+
+        <div class="sidebar-label">
+            <span class="sidebar-label-text">Records</span>
+        </div>
+
+        <a href="{{ url_for('patient.history') }}"
+           class="sidebar-link {% if request.endpoint == 'patient.history' %}active{% endif %}"
+           data-tooltip="Prediction History">
+            <i class="bi bi-clock-history"></i>
+            <span>Prediction History</span>
+        </a>
+
+        <div class="sidebar-label">
+            <span class="sidebar-label-text">Account</span>
+        </div>
+
+        <a href="{{ url_for('profile.view_profile') }}"
+           class="sidebar-link {% if request.endpoint == 'profile.view_profile' %}active{% endif %}"
+           data-tooltip="My Profile">
+            <i class="bi bi-person-circle"></i>
+            <span>My Profile</span>
+        </a>
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <img src="{{ url_for('static', filename='images/uploads/' + (current_user.profile_image if current_user.profile_image else 'default_profile.png')) }}"
+                 alt="Profile"/>
+            <div class="user-info">
+                <p>{{ current_user.username }}</p>
+                <span>Doctor</span>
+            </div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}"
+           class="sidebar-link text-danger"
+           data-tooltip="Logout">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Logout</span>
+        </a>
+    </div>
+
+</div>
+
+<div class="main-content" id="mainContent">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% set layout_scope = 'authenticated' %}
+
+{% else %}
+
+<div class="container mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
+    {% set layout_scope = 'anonymous' %}
+
+{% endif %}
+
+    {% block content %}{% endblock %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ==============================
+    // Collapsible Sidebar Logic
+    // ==============================
+    const sidebar     = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn   = document.getElementById('sidebarToggle');
+
+    if (sidebar && toggleBtn) {
+        // Restore state from localStorage
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            if (mainContent) mainContent.classList.add('expanded');
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            if (mainContent) mainContent.classList.toggle('expanded');
+            localStorage.setItem(
+                'sidebarCollapsed',
+                sidebar.classList.contains('collapsed')
+            );
+        });
+    }
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

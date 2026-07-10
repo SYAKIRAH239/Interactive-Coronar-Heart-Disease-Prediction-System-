@@ -1,0 +1,1085 @@
+{% extends "base.html" %}
+{% block title %}Heartfy — CHD Prediction System{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* ── Reset for landing ── */
+    body { background: #fff; }
+
+    /* ── Navbar ── */
+    .landing-nav {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 999;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid #E2E8F0;
+        padding: 0 48px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .landing-nav .brand {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #4A90D9;
+        letter-spacing: -0.5px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .landing-nav .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+        margin: 0; padding: 0;
+    }
+    .landing-nav .nav-links a {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #718096;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .landing-nav .nav-links a:hover { color: #4A90D9; }
+    .btn-nav-login {
+        background: #4A90D9;
+        color: white !important;
+        padding: 8px 22px;
+        border-radius: 30px;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
+        transition: background 0.2s !important;
+    }
+    .btn-nav-login:hover {
+        background: #357ABD !important;
+        color: white !important;
+    }
+
+    /* ── Hero ── */
+    .hero {
+        min-height: 100vh;
+        padding: 120px 0 80px;
+        display: flex;
+        align-items: center;
+        background: linear-gradient(135deg,
+            #FFFFFF 0%,
+            #EBF4FF 40%,
+            #F0FFF4 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .hero::before {
+        content: '';
+        position: absolute;
+        width: 600px; height: 600px;
+        border-radius: 50%;
+        background: radial-gradient(circle,
+            rgba(74,144,217,0.08) 0%,
+            transparent 70%);
+        top: -100px; right: -100px;
+        pointer-events: none;
+    }
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #EBF4FF;
+        color: #4A90D9;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border: 1px solid rgba(74,144,217,0.2);
+    }
+    .hero-badge span {
+        width: 6px; height: 6px;
+        background: #4A90D9;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .hero-title {
+        font-size: 3.6rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: #1A202C;
+        letter-spacing: -1.5px;
+        margin-bottom: 20px;
+    }
+    .hero-title em {
+        font-style: normal;
+        color: #4A90D9;
+    }
+    .hero-desc {
+        font-size: 1.05rem;
+        color: #718096;
+        line-height: 1.7;
+        max-width: 440px;
+        margin-bottom: 36px;
+    }
+    .hero-actions {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .btn-hero-primary {
+        background: #4A90D9;
+        color: white;
+        padding: 13px 30px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(74,144,217,0.3);
+    }
+    .btn-hero-primary:hover {
+        background: #357ABD;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(74,144,217,0.4);
+    }
+    .btn-hero-outline {
+        background: white;
+        color: #2D3748;
+        padding: 13px 30px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        border: 1.5px solid #E2E8F0;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-hero-outline:hover {
+        border-color: #4A90D9;
+        color: #4A90D9;
+        transform: translateY(-1px);
+    }
+
+    /* ── Hero visual ── */
+    .hero-visual {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .hero-glow {
+        width: 380px; height: 380px;
+        border-radius: 50%;
+        background: radial-gradient(circle,
+            rgba(74,144,217,0.12) 0%,
+            rgba(91,191,186,0.08) 50%,
+            transparent 70%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .hero-icon-main {
+        font-size: 9rem;
+        color: #4A90D9;
+        opacity: 0.15;
+        position: absolute;
+    }
+    .hero-card-float {
+        position: absolute;
+        background: white;
+        border-radius: 16px;
+        padding: 14px 18px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+        border: 1px solid #E2E8F0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 160px;
+        animation: float 3s ease-in-out infinite;
+    }
+    .hero-card-float:nth-child(2) {
+        top: 30px; right: -20px;
+        animation-delay: 0s;
+    }
+    .hero-card-float:nth-child(3) {
+        bottom: 60px; right: 10px;
+        animation-delay: 1s;
+    }
+    .hero-card-float:nth-child(4) {
+        bottom: 40px; left: -10px;
+        animation-delay: 2s;
+    }
+    @keyframes float {
+        0%,100% { transform: translateY(0); }
+        50%      { transform: translateY(-8px); }
+    }
+    .float-icon {
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .float-label {
+        font-size: 0.7rem;
+        color: #718096;
+        margin: 0;
+    }
+    .float-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #2D3748;
+        margin: 0;
+    }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+        background: white;
+        border-top: 1px solid #E2E8F0;
+        border-bottom: 1px solid #E2E8F0;
+        padding: 28px 0;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 0 20px;
+    }
+    .stat-item h3 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #4A90D9;
+        margin: 0;
+        letter-spacing: -1px;
+    }
+    .stat-item p {
+        font-size: 0.82rem;
+        color: #718096;
+        margin: 4px 0 0;
+    }
+    .stat-divider {
+        width: 1px;
+        height: 40px;
+        background: #E2E8F0;
+        margin: auto;
+    }
+
+    /* ── Features Section ── */
+    .features-section {
+        padding: 96px 0;
+        background: #F7FAFC;
+    }
+    .section-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #EBF4FF;
+        color: #4A90D9;
+        padding: 5px 14px;
+        border-radius: 30px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+    .section-tag span {
+        width: 5px; height: 5px;
+        background: #4A90D9;
+        border-radius: 50%;
+    }
+    .section-title {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: #1A202C;
+        letter-spacing: -1px;
+        line-height: 1.2;
+        margin-bottom: 12px;
+    }
+    .section-title em {
+        font-style: normal;
+        color: #4A90D9;
+    }
+    .section-desc {
+        font-size: 1rem;
+        color: #718096;
+        max-width: 520px;
+        margin: 0 auto 56px;
+        line-height: 1.7;
+    }
+
+    /* Feature cards */
+    .feature-card {
+        background: white;
+        border-radius: 20px;
+        padding: 32px 28px;
+        border: 1px solid #E2E8F0;
+        height: 100%;
+        transition: all 0.25s;
+        position: relative;
+        overflow: hidden;
+    }
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #4A90D9, #5BBFBA);
+        opacity: 0;
+        transition: opacity 0.25s;
+    }
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(74,144,217,0.12);
+        border-color: rgba(74,144,217,0.2);
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-num {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #CBD5E0;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+    }
+    .feature-icon-wrap {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 18px;
+    }
+    .feature-card h5 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1A202C;
+        margin-bottom: 10px;
+    }
+    .feature-card p {
+        font-size: 0.875rem;
+        color: #718096;
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    /* ── How it works ── */
+    .how-section {
+        padding: 96px 0;
+        background: white;
+    }
+    .step-line {
+        display: flex;
+        align-items: flex-start;
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+    .step-num-wrap {
+        flex-shrink: 0;
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        background: #EBF4FF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #4A90D9;
+    }
+    .step-content h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1A202C;
+        margin-bottom: 6px;
+    }
+    .step-content p {
+        font-size: 0.88rem;
+        color: #718096;
+        line-height: 1.65;
+        margin: 0;
+    }
+    .how-visual {
+        background: linear-gradient(135deg, #EBF4FF, #E6FFFA);
+        border-radius: 24px;
+        height: 100%;
+        min-height: 380px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .how-visual-inner {
+        text-align: center;
+        padding: 32px;
+    }
+    .how-visual i {
+        font-size: 5rem;
+        color: #4A90D9;
+        opacity: 0.3;
+        display: block;
+        margin-bottom: 16px;
+    }
+
+    /* ── CTA Section ── */
+    .cta-section {
+        padding: 80px 0;
+        background: linear-gradient(135deg, #4A90D9 0%, #357ABD 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .cta-section::before {
+        content: '';
+        position: absolute;
+        width: 400px; height: 400px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+        top: -150px; right: -100px;
+    }
+    .cta-section::after {
+        content: '';
+        position: absolute;
+        width: 250px; height: 250px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+        bottom: -80px; left: -50px;
+    }
+    .cta-section h2 {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: white;
+        letter-spacing: -1px;
+        margin-bottom: 14px;
+    }
+    .cta-section p {
+        font-size: 1rem;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 32px;
+    }
+    .btn-cta-white {
+        background: white;
+        color: #4A90D9;
+        padding: 13px 30px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .btn-cta-white:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+        color: #357ABD;
+    }
+    .btn-cta-outline {
+        background: transparent;
+        color: white;
+        padding: 13px 30px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1.5px solid rgba(255,255,255,0.5);
+        transition: all 0.2s;
+    }
+    .btn-cta-outline:hover {
+        border-color: white;
+        color: white;
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Footer ── */
+    .landing-footer {
+        background: #1A202C;
+        color: #A0AEC0;
+        padding: 40px 0 24px;
+    }
+    .landing-footer .brand {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 6px;
+    }
+    .landing-footer p {
+        font-size: 0.82rem;
+        color: #718096;
+        margin: 0;
+    }
+    .footer-divider {
+        border-color: #2D3748;
+        margin: 24px 0 20px;
+    }
+    .footer-bottom {
+        font-size: 0.8rem;
+        color: #4A5568;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ================================================
+     NAVBAR
+================================================ -->
+<nav class="landing-nav">
+    <a href="{{ url_for('auth.landing') }}" class="brand">
+        <i class="bi bi-heart-pulse-fill"></i>
+        Heartfy
+    </a>
+    <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+        <li>
+            <a href="{{ url_for('auth.login') }}"
+               class="btn-nav-login">
+                Login
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ================================================
+     HERO
+================================================ -->
+<section class="hero">
+    <div class="container">
+        <div class="row align-items-center g-5">
+
+            <!-- Left -->
+            <div class="col-lg-6">
+                <div class="hero-badge">
+                    <span></span>
+                    AI-Powered Clinical Decision Support
+                </div>
+                <h1 class="hero-title">
+                    <em>Smarter</em> CHD risk<br>
+                    assessment for<br>
+                    every patient
+                </h1>
+                <p class="hero-desc">
+                    Heartfy combines stacked ensemble machine learning
+                    with explainable AI to help doctors assess coronary
+                    heart disease risk — accurately, transparently,
+                    and in seconds.
+                </p>
+                <div class="hero-actions">
+                    <a href="{{ url_for('auth.register') }}"
+                       class="btn-hero-primary">
+                        <i class="bi bi-person-plus-fill"></i>
+                        Get Started Free
+                    </a>
+                    <a href="#how" class="btn-hero-outline">
+                        <i class="bi bi-play-circle"></i>
+                        How It Works
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right — floating visual -->
+            <div class="col-lg-6">
+                <div class="hero-visual">
+                    <div class="hero-glow">
+                        <i class="bi bi-heart-pulse-fill
+                                  hero-icon-main"></i>
+
+                        <!-- Floating stat cards -->
+                        <div class="hero-card-float">
+                            <div class="float-icon"
+                                 style="background:#EBF4FF;">
+                                <i class="bi bi-shield-check"
+                                   style="color:#4A90D9;"></i>
+                            </div>
+                            <div>
+                                <p class="float-label">
+                                    Model Accuracy
+                                </p>
+                                <p class="float-value">91.4%</p>
+                            </div>
+                        </div>
+
+                        <div class="hero-card-float">
+                            <div class="float-icon"
+                                 style="background:#C6F6D5;">
+                                <i class="bi bi-people-fill"
+                                   style="color:#38A169;"></i>
+                            </div>
+                            <div>
+                                <p class="float-label">
+                                    Dataset Patients
+                                </p>
+                                <p class="float-value">5,449</p>
+                            </div>
+                        </div>
+
+                        <div class="hero-card-float">
+                            <div class="float-icon"
+                                 style="background:#FEFCBF;">
+                                <i class="bi bi-stars"
+                                   style="color:#D69E2E;"></i>
+                            </div>
+                            <div>
+                                <p class="float-label">
+                                    AI Explanation
+                                </p>
+                                <p class="float-value">
+                                    SHAP + Gemini
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
+     STATS STRIP
+================================================ -->
+<section class="stats-strip">
+    <div class="container">
+        <div class="row align-items-center
+                    justify-content-center g-0">
+            <div class="col-auto">
+                <div class="stat-item">
+                    <h3>5,449</h3>
+                    <p>Training Patients</p>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-divider"></div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-item">
+                    <h3>3</h3>
+                    <p>Risk Categories</p>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-divider"></div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-item">
+                    <h3>15</h3>
+                    <p>Clinical Features</p>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-divider"></div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-item">
+                    <h3>89%+</h3>
+                    <p>Prediction Accuracy</p>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-divider"></div>
+            </div>
+            <div class="col-auto">
+                <div class="stat-item">
+                    <h3>XAI</h3>
+                    <p>Explainable Results</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
+     FEATURES
+================================================ -->
+<section class="features-section" id="features">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-tag">
+                <span></span> Features
+            </div>
+            <h2 class="section-title">
+                Everything you need for<br>
+                <em>modern clinical AI</em>
+            </h2>
+            <p class="section-desc">
+                Heartfy combines cutting-edge machine learning
+                with a human-first approach — so every prediction
+                is accurate, transparent, and clinically meaningful.
+            </p>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- Feature 1 — highlighted -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100"
+                     style="background:linear-gradient(
+                                135deg,#4A90D9 0%,#357ABD 100%);
+                            border:none;">
+                    <div class="feature-num"
+                         style="color:rgba(255,255,255,0.4);">
+                        01
+                    </div>
+                    <div class="feature-icon-wrap"
+                         style="background:rgba(255,255,255,0.15);">
+                        <i class="bi bi-layers-fill"
+                           style="color:white;"></i>
+                    </div>
+                    <h5 style="color:white;">
+                        Stacked Ensemble Model
+                    </h5>
+                    <p style="color:rgba(255,255,255,0.75);">
+                        Combines Random Forest, XGBoost and
+                        Logistic Regression into a powerful
+                        stacking classifier for higher accuracy
+                        than any single model alone.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100">
+                    <div class="feature-num">02</div>
+                    <div class="feature-icon-wrap"
+                         style="background:#EBF4FF;">
+                        <i class="bi bi-bar-chart-steps"
+                           style="color:#4A90D9;"></i>
+                    </div>
+                    <h5>SHAP Explainability</h5>
+                    <p>
+                        Every prediction is accompanied by a
+                        SHAP waterfall chart showing exactly
+                        which clinical factors drove the
+                        result — no black box.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100">
+                    <div class="feature-num">03</div>
+                    <div class="feature-icon-wrap"
+                         style="background:#E6FFFA;">
+                        <i class="bi bi-stars"
+                           style="color:#5BBFBA;"></i>
+                    </div>
+                    <h5>Gemini AI Explanation</h5>
+                    <p>
+                        Google Gemini reads the SHAP chart and
+                        translates it into plain clinical language
+                        — giving doctors an instant narrative
+                        explanation they can act on.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100">
+                    <div class="feature-num">04</div>
+                    <div class="feature-icon-wrap"
+                         style="background:#FFF5F5;">
+                        <i class="bi bi-sliders"
+                           style="color:#E53E3E;"></i>
+                    </div>
+                    <h5>Scenario Analysis</h5>
+                    <p>
+                        Adjust clinical parameters interactively
+                        with sliders and see how the predicted
+                        risk changes in real time — ideal for
+                        patient consultations.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100">
+                    <div class="feature-num">05</div>
+                    <div class="feature-icon-wrap"
+                         style="background:#FFFBEB;">
+                        <i class="bi bi-file-earmark-pdf"
+                           style="color:#D69E2E;"></i>
+                    </div>
+                    <h5>PDF Clinical Reports</h5>
+                    <p>
+                        Generate professional, downloadable PDF
+                        reports for each prediction — including
+                        patient data, SHAP chart, and AI
+                        explanation.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="col-lg-4">
+                <div class="feature-card h-100">
+                    <div class="feature-num">06</div>
+                    <div class="feature-icon-wrap"
+                         style="background:#EBF4FF;">
+                        <i class="bi bi-bar-chart-line"
+                           style="color:#4A90D9;"></i>
+                    </div>
+                    <h5>Dataset Dashboard</h5>
+                    <p>
+                        Explore interactive visualizations of
+                        the 5,449-patient training dataset —
+                        cholesterol, BMI, demographics,
+                        and CHD distribution.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
+     HOW IT WORKS
+================================================ -->
+<section class="how-section" id="how">
+    <div class="container">
+        <div class="row align-items-center g-5">
+
+            <!-- Steps -->
+            <div class="col-lg-6">
+                <div class="section-tag mb-3">
+                    <span></span> How It Works
+                </div>
+                <h2 class="section-title mb-4">
+                    From patient data<br>
+                    to <em>clinical insight</em>
+                </h2>
+
+                <div class="step-line">
+                    <div class="step-num-wrap">1</div>
+                    <div class="step-content">
+                        <h5>Register & Login</h5>
+                        <p>Create your doctor account securely.
+                           Your data and your patients' records
+                           are kept private and safe.</p>
+                    </div>
+                </div>
+
+                <div class="step-line">
+                    <div class="step-num-wrap">2</div>
+                    <div class="step-content">
+                        <h5>Enter Patient Information</h5>
+                        <p>Input 15 clinical features including
+                           cholesterol levels, BMI, glucose,
+                           smoking status, and family history.</p>
+                    </div>
+                </div>
+
+                <div class="step-line">
+                    <div class="step-num-wrap">3</div>
+                    <div class="step-content">
+                        <h5>Get Instant Prediction</h5>
+                        <p>The stacked ensemble model classifies
+                           CHD risk as Low, Moderate, or High —
+                           with confidence scores and
+                           probabilities.</p>
+                    </div>
+                </div>
+
+                <div class="step-line">
+                    <div class="step-num-wrap">4</div>
+                    <div class="step-content">
+                        <h5>Understand & Act</h5>
+                        <p>Review the SHAP chart, read the Gemini
+                           AI explanation, run scenario analysis,
+                           and download a professional PDF
+                           report.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Visual -->
+            <div class="col-lg-6">
+                <div class="how-visual">
+                    <div class="how-visual-inner">
+                        <i class="bi bi-heart-pulse-fill"></i>
+
+                        <!-- Mini prediction card -->
+                        <div style="background:white;
+                                    border-radius:16px;
+                                    padding:20px 24px;
+                                    box-shadow:0 8px 32px
+                                        rgba(0,0,0,0.08);
+                                    text-align:left;
+                                    max-width:280px;
+                                    margin:0 auto;">
+                            <p style="font-size:0.7rem;
+                                      color:#718096;
+                                      text-transform:uppercase;
+                                      letter-spacing:0.8px;
+                                      margin-bottom:8px;">
+                                CHD Risk Assessment
+                            </p>
+                            <div style="display:flex;
+                                        align-items:center;
+                                        gap:10px;
+                                        margin-bottom:14px;">
+                                <div style="width:10px;height:10px;
+                                            border-radius:50%;
+                                            background:#38A169;">
+                                </div>
+                                <span style="font-weight:700;
+                                             font-size:1rem;
+                                             color:#276749;">
+                                    Low Risk
+                                </span>
+                                <span style="margin-left:auto;
+                                             font-weight:800;
+                                             color:#4A90D9;">
+                                    87.2%
+                                </span>
+                            </div>
+
+                            <!-- Mini bars -->
+                            <div style="margin-bottom:6px;">
+                                <div style="display:flex;
+                                            justify-content:space-between;
+                                            font-size:0.72rem;
+                                            color:#718096;
+                                            margin-bottom:3px;">
+                                    <span>Low Risk</span>
+                                    <span>87%</span>
+                                </div>
+                                <div style="background:#E2E8F0;
+                                            border-radius:4px;
+                                            height:6px;">
+                                    <div style="width:87%;
+                                                height:6px;
+                                                background:#38A169;
+                                                border-radius:4px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:6px;">
+                                <div style="display:flex;
+                                            justify-content:space-between;
+                                            font-size:0.72rem;
+                                            color:#718096;
+                                            margin-bottom:3px;">
+                                    <span>Moderate</span>
+                                    <span>9%</span>
+                                </div>
+                                <div style="background:#E2E8F0;
+                                            border-radius:4px;
+                                            height:6px;">
+                                    <div style="width:9%;
+                                                height:6px;
+                                                background:#D69E2E;
+                                                border-radius:4px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex;
+                                            justify-content:space-between;
+                                            font-size:0.72rem;
+                                            color:#718096;
+                                            margin-bottom:3px;">
+                                    <span>High Risk</span>
+                                    <span>4%</span>
+                                </div>
+                                <div style="background:#E2E8F0;
+                                            border-radius:4px;
+                                            height:6px;">
+                                    <div style="width:4%;
+                                                height:6px;
+                                                background:#E53E3E;
+                                                border-radius:4px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
+     CTA
+================================================ -->
+<section class="cta-section">
+    <div class="container text-center"
+         style="position:relative;z-index:1;">
+        <h2>
+            Ready to assess CHD risk<br>with confidence?
+        </h2>
+        <p>
+            Join Heartfy today — built for doctors,
+            powered by AI, designed for clarity.
+        </p>
+        <div class="d-flex gap-3 justify-content-center
+                    flex-wrap">
+            <a href="{{ url_for('auth.register') }}"
+               class="btn-cta-white">
+                <i class="bi bi-person-plus-fill"></i>
+                Create Free Account
+            </a>
+            <a href="{{ url_for('auth.login') }}"
+               class="btn-cta-outline">
+                <i class="bi bi-box-arrow-in-right"></i>
+                Sign In
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
+     FOOTER
+================================================ -->
+<footer class="landing-footer">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="brand">
+                    <i class="bi bi-heart-pulse-fill me-2"
+                       style="color:#4A90D9;"></i>Heartfy
+                </div>
+                <p class="mt-1">
+                    Coronary Heart Disease Prediction System
+                </p>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <p style="font-size:0.82rem;color:#4A5568;">
+                    Built for medical professionals.<br>
+                    Powered by Stacked Ensemble ML + XAI.
+                </p>
+            </div>
+        </div>
+        <hr class="footer-divider"/>
+        <div class="row">
+            <div class="col-12 text-center footer-bottom">
+                © 2025 Heartfy. Final Year Project —
+                AI-Powered CHD Risk Prediction System.
+            </div>
+        </div>
+    </div>
+</footer>
+
+{% endblock %}

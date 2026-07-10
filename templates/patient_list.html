@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Patient List — Heartfy{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4><i class="bi bi-people-fill me-2"
+               style="color:var(--primary);"></i>Patient List</h4>
+        <p>All registered patients and their latest prediction</p>
+    </div>
+    <a href="{{ url_for('patient.new_patient') }}"
+       class="btn btn-primary">
+        <i class="bi bi-person-plus me-2"></i>New Patient
+    </a>
+</div>
+
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:12px;
+                            background:#EBF4FF;display:flex;
+                            align-items:center;justify-content:center;">
+                    <i class="bi bi-people-fill"
+                       style="color:var(--primary);font-size:1.2rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0"
+                       style="font-size:0.72rem;">My Patients</p>
+                    <h4 class="fw-bold mb-0">
+                        {{ patients|length }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:12px;
+                            background:#C6F6D5;display:flex;
+                            align-items:center;justify-content:center;">
+                    <i class="bi bi-shield-check"
+                       style="color:#38A169;font-size:1.2rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0"
+                       style="font-size:0.72rem;">Low Risk</p>
+                    <h4 class="fw-bold mb-0" style="color:#38A169;">
+                        {{ patients|selectattr('prediction_outcome',
+                           'equalto', 0)|list|length }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:12px;
+                            background:#FEFCBF;display:flex;
+                            align-items:center;justify-content:center;">
+                    <i class="bi bi-exclamation-circle"
+                       style="color:#D69E2E;font-size:1.2rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0"
+                       style="font-size:0.72rem;">Moderate Risk</p>
+                    <h4 class="fw-bold mb-0" style="color:#D69E2E;">
+                        {{ patients|selectattr('prediction_outcome',
+                           'equalto', 1)|list|length }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:12px;
+                            background:#FED7D7;display:flex;
+                            align-items:center;justify-content:center;">
+                    <i class="bi bi-exclamation-triangle-fill"
+                       style="color:#E53E3E;font-size:1.2rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0"
+                       style="font-size:0.72rem;">High Risk</p>
+                    <h4 class="fw-bold mb-0" style="color:#E53E3E;">
+                        {{ patients|selectattr('prediction_outcome',
+                           'equalto', 2)|list|length }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-4">
+    {% if patients %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>BMI</th>
+                    <th>Latest Risk</th>
+                    <th>Date Added</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in patients %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ p.name }}</td>
+                    <td>{{ p.age }}</td>
+                    <td>
+                        {{ 'Male' if p.gender == 0 else 'Female' }}
+                    </td>
+                    <td>{{ p.bmi }}</td>
+                    <td>
+                        {% if p.prediction_outcome == 0 %}
+                            <span class="badge-low">Low Risk</span>
+                        {% elif p.prediction_outcome == 1 %}
+                            <span class="badge-moderate">
+                                Moderate Risk
+                            </span>
+                        {% elif p.prediction_outcome == 2 %}
+                            <span class="badge-high">High Risk</span>
+                        {% else %}
+                            <span class="text-muted small">
+                                Not predicted
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">
+                        {{ p.created_at.strftime('%d %b %Y') }}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('patient.predict',
+                                    patient_id=p.patient_id) }}"
+                            class="btn btn-primary btn-sm"
+                            title="Predict">
+                                <i class="bi bi-cpu"></i>
+                            </a>
+                            <a href="{{ url_for('patient.edit_patient',
+                                    patient_id=p.patient_id) }}"
+                            class="btn btn-outline-secondary btn-sm"
+                            title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST"
+                                action="{{ url_for('patient.delete_patient',
+                                            patient_id=p.patient_id) }}"
+                                onsubmit="return confirm(
+                                    'Delete this patient and all their predictions?');">
+                                <button type="submit"
+                                        class="btn btn-outline-danger btn-sm"
+                                        title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-people"
+           style="font-size:3rem;color:var(--border);"></i>
+        <p class="text-muted mt-3 mb-3">No patients registered yet.</p>
+        <a href="{{ url_for('patient.new_patient') }}"
+           class="btn btn-primary">
+            <i class="bi bi-person-plus me-2"></i>Add First Patient
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

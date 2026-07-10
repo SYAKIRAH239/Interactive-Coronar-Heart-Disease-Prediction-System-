@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% block title %}Scenario Analysis — Heartfy{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .slider-card {
+        background: var(--soft-bg);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
+    }
+    .slider-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 6px;
+    }
+    .slider-value {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+        min-width: 50px;
+        text-align: right;
+    }
+    input[type=range] {
+        accent-color: var(--primary);
+        width: 100%;
+    }
+    .risk-badge {
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 12px 28px;
+        border-radius: 30px;
+        display: inline-block;
+    }
+    .prob-bar {
+        height: 10px;
+        border-radius: 5px;
+        transition: width 0.4s ease;
+    }
+    .result-panel {
+        position: sticky;
+        top: 24px;
+    }
+    .note-badge {
+        background: #EBF4FF;
+        color: var(--primary);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.82rem;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex align-items-center gap-3 mb-1">
+        <a href="javascript:history.back()"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="fw-bold mb-0">
+            <i class="bi bi-sliders me-2"
+               style="color:var(--primary);"></i>Scenario Analysis
+        </h4>
+    </div>
+    <p class="text-muted ms-5">
+        Adjust clinical parameters to see how they affect
+        CHD risk for <strong>{{ patient.name }}</strong>.
+        Changes are not saved.
+    </p>
+</div>
+
+<div class="row g-4">
+
+    <!-- ============================
+         LEFT: Parameter Controls
+    ============================ -->
+    <div class="col-lg-6">
+
+        <div class="note-badge">
+            <i class="bi bi-info-circle me-2"></i>
+            Move sliders or change dropdowns — the prediction
+            updates automatically in real time.
+        </div>
+
+        <!-- Numerical Sliders -->
+        <div class="card p-4 mb-4">
+            <h6 class="fw-bold mb-3"
+                style="color:var(--text-muted);font-size:0.75rem;
+                       text-transform:uppercase;letter-spacing:0.8px;">
+                Numerical Parameters
+            </h6>
+
+            <!-- AGE -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">Age (years)</span>
+                    <span class="slider-value" id="val_AGE">
+                        {{ form_data.AGE }}
+                    </span>
+                </div>
+                <input type="range" id="AGE"
+                       min="18" max="100" step="1"
+                       value="{{ form_data.AGE }}"
+                       oninput="updateSlider('AGE', this.value)"/>
+            </div>
+
+            <!-- BMI -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">BMI</span>
+                    <span class="slider-value" id="val_BMI">
+                        {{ form_data.BMI }}
+                    </span>
+                </div>
+                <input type="range" id="BMI"
+                       min="15" max="50" step="0.1"
+                       value="{{ form_data.BMI }}"
+                       oninput="updateSlider('BMI', this.value)"/>
+            </div>
+
+            <!-- WC -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">
+                        Waist Circumference (cm)
+                    </span>
+                    <span class="slider-value" id="val_WC">
+                        {{ form_data.WC }}
+                    </span>
+                </div>
+                <input type="range" id="WC"
+                       min="50" max="150" step="0.5"
+                       value="{{ form_data.WC }}"
+                       oninput="updateSlider('WC', this.value)"/>
+            </div>
+
+            <!-- GLUCOSE -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">
+                        Glucose (mmol/L)
+                    </span>
+                    <span class="slider-value" id="val_GLUCOSE">
+                        {{ form_data.GLUCOSE }}
+                    </span>
+                </div>
+                <input type="range" id="GLUCOSE"
+                       min="2" max="20" step="0.1"
+                       value="{{ form_data.GLUCOSE }}"
+                       oninput="updateSlider('GLUCOSE', this.value)"/>
+            </div>
+
+            <!-- TC -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">
+                        Total Cholesterol / TC (mmol/L)
+                    </span>
+                    <span class="slider-value" id="val_TC">
+                        {{ form_data.TC }}
+                    </span>
+                </div>
+                <input type="range" id="TC"
+                       min="1" max="15" step="0.1"
+                       value="{{ form_data.TC }}"
+                       oninput="updateSlider('TC', this.value)"/>
+            </div>
+
+            <!-- TG -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">
+                        Triglyceride / TG (mmol/L)
+                    </span>
+                    <span class="slider-value" id="val_TG">
+                        {{ form_data.TG }}
+                    </span>
+                </div>
+                <input type="range" id="TG"
+                       min="0.1" max="10" step="0.1"
+                       value="{{ form_data.TG }}"
+                       oninput="updateSlider('TG', this.value)"/>
+            </div>
+
+            <!-- LDL -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">LDL (mmol/L)</span>
+                    <span class="slider-value" id="val_LDL">
+                        {{ form_data.LDL }}
+                    </span>
+                </div>
+                <input type="range" id="LDL"
+                       min="0.5" max="10" step="0.1"
+                       value="{{ form_data.LDL }}"
+                       oninput="updateSlider('LDL', this.value)"/>
+            </div>
+
+            <!-- HDL -->
+            <div class="slider-card">
+                <div class="d-flex justify-content-between">
+                    <span class="slider-label">HDL (mmol/L)</span>
+                    <span class="slider-value" id="val_HDL">
+                        {{ form_data.HDL }}
+                    </span>
+                </div>
+                <input type="range" id="HDL"
+                       min="0.1" max="5" step="0.1"
+                       value="{{ form_data.HDL }}"
+                       oninput="updateSlider('HDL', this.value)"/>
+            </div>
+<!-- BP_SYS -->
+                <div class="slider-card">
+                    <div class="d-flex justify-content-between">
+                        <span class="slider-label">
+                            Systolic BP (mmHg)
+                        </span>
+                        <span class="slider-value" id="val_BP_SYS">
+                            {{ form_data.BP_SYS }}
+                        </span>
+                    </div>
+                    <input type="range" id="BP_SYS"
+                        min="60" max="250" step="1"
+                        value="{{ form_data.BP_SYS }}"
+                        oninput="updateSlider('BP_SYS', this.value)"/>
+                </div>
+
+                <!-- BP_DIAS -->
+                <div class="slider-card">
+                    <div class="d-flex justify-content-between">
+                        <span class="slider-label">
+                            Diastolic BP (mmHg)
+                        </span>
+                        <span class="slider-value" id="val_BP_DIAS">
+                            {{ form_data.BP_DIAS }}
+                        </span>
+                    </div>
+                    <input type="range" id="BP_DIAS"
+                        min="40" max="150" step="1"
+                        value="{{ form_data.BP_DIAS }}"
+                        oninput="updateSlider('BP_DIAS', this.value)"/>
+                </div>
+        </div>
+
+        
+
+        <!-- Categorical Dropdowns -->
+        <div class="card p-4">
+            <h6 class="fw-bold mb-3"
+                style="color:var(--text-muted);font-size:0.75rem;
+                       text-transform:uppercase;letter-spacing:0.8px;">
+                Categorical Parameters
+            </h6>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Gender
+                    </label>
+                    <select id="GENDER" class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="Male"
+                            {{ 'selected' if form_data.GENDER == 'Male' }}>
+                            Male
+                        </option>
+                        <option value="Female"
+                            {{ 'selected' if form_data.GENDER == 'Female' }}>
+                            Female
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Smoking Status
+                    </label>
+                    <select id="SMOKING" class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="Non-Smoker"
+                            {{ 'selected' if form_data.SMOKING == 'Non-Smoker' }}>
+                            Non-Smoker
+                        </option>
+                        <option value="Ex-Smoker"
+                            {{ 'selected' if form_data.SMOKING == 'Ex-Smoker' }}>
+                            Ex-Smoker
+                        </option>
+                        <option value="Current Smoker"
+                            {{ 'selected' if form_data.SMOKING == 'Current Smoker' }}>
+                            Current Smoker
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Alcohol
+                    </label>
+                    <select id="ALCOHOL" class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="No"
+                            {{ 'selected' if form_data.ALCOHOL == 'No' }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if form_data.ALCOHOL == 'Yes' }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Hypercholesterolaemia
+                    </label>
+                    <select id="HYPERCHOLESTEROLAEMIA"
+                            class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="No"
+                            {{ 'selected' if form_data.HYPERCHOLESTEROLAEMIA == 'No' }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if form_data.HYPERCHOLESTEROLAEMIA == 'Yes' }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Diabetes (DM)
+                    </label>
+                    <select id="DM" class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="No"
+                            {{ 'selected' if form_data.DM == 'No' }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if form_data.DM == 'Yes' }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">
+                        Hypertension (HPT)
+                    </label>
+                    <select id="HPT" class="form-select form-select-sm"
+                            onchange="runPrediction()">
+                        <option value="No"
+                            {{ 'selected' if form_data.HPT == 'No' }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if form_data.HPT == 'Yes' }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================
+         RIGHT: Live Result Panel
+    ============================ -->
+    <div class="col-lg-6">
+        <div class="result-panel">
+
+            <!-- Risk Result -->
+            <div class="card p-4 text-center mb-4"
+                 id="resultCard">
+                <p class="text-muted small fw-semibold mb-3"
+                   style="text-transform:uppercase;
+                          letter-spacing:0.8px;">
+                    Live CHD Risk Prediction
+                </p>
+
+                <!-- Risk Icon -->
+                <div id="riskIcon" class="mb-3"
+                     style="display:flex;justify-content:center;">
+                    <div style="width:80px;height:80px;
+                                border-radius:50%;
+                                background:#C6F6D5;
+                                display:flex;align-items:center;
+                                justify-content:center;">
+                        <i class="bi bi-shield-check"
+                           style="font-size:2rem;
+                                  color:#38A169;"></i>
+                    </div>
+                </div>
+
+                <!-- Risk Label -->
+                <div id="riskLabel" class="mb-4">
+                    <span class="risk-badge"
+                          style="background:#C6F6D5;color:#276749;">
+                        Loading...
+                    </span>
+                </div>
+
+                <!-- Probability Bars -->
+                <div class="text-start px-2">
+                    <p class="text-muted small fw-semibold mb-3"
+                       style="text-transform:uppercase;
+                              letter-spacing:0.5px;">
+                        Risk Probabilities
+                    </p>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between
+                                    small mb-1">
+                            <span>Low Risk</span>
+                            <span class="fw-bold"
+                                  id="prob_low_text">—</span>
+                        </div>
+                        <div style="background:#E2E8F0;
+                                    border-radius:5px;height:10px;">
+                            <div class="prob-bar"
+                                 id="prob_low_bar"
+                                 style="width:0%;
+                                        background:#38A169;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between
+                                    small mb-1">
+                            <span>Moderate Risk</span>
+                            <span class="fw-bold"
+                                  id="prob_mod_text">—</span>
+                        </div>
+                        <div style="background:#E2E8F0;
+                                    border-radius:5px;height:10px;">
+                            <div class="prob-bar"
+                                 id="prob_mod_bar"
+                                 style="width:0%;
+                                        background:#D69E2E;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between
+                                    small mb-1">
+                            <span>High Risk</span>
+                            <span class="fw-bold"
+                                  id="prob_high_text">—</span>
+                        </div>
+                        <div style="background:#E2E8F0;
+                                    border-radius:5px;height:10px;">
+                            <div class="prob-bar"
+                                 id="prob_high_bar"
+                                 style="width:0%;
+                                        background:#E53E3E;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading spinner -->
+                <div id="loadingSpinner"
+                     class="mt-2" style="display:none;">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary" role="status">
+                    </div>
+                    <span class="text-muted small ms-2">
+                        Updating...
+                    </span>
+                </div>
+
+            </div>
+
+            <!-- Clinical Advice -->
+            <div class="card p-4 mb-4" id="adviceCard">
+                <h6 class="fw-semibold mb-2"
+                    id="adviceTitle"
+                    style="color:var(--primary);">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Clinical Recommendation
+                </h6>
+                <p class="small text-muted mb-0" id="adviceText">
+                    Adjust the parameters to see updated advice.
+                </p>
+            </div>
+
+            <!-- SHAP Plot -->
+            <div class="card p-4" id="shapCard"
+                 style="display:none;">
+                <h6 class="fw-bold mb-1">
+                    <i class="bi bi-bar-chart-steps me-2"
+                       style="color:var(--primary);"></i>
+                    SHAP Explanation
+                </h6>
+                <p class="text-muted small mb-3">
+                    Shows which factors most influenced
+                    this updated prediction.
+                </p>
+                <div id="shapLoading"
+                     class="text-center py-3"
+                     style="display:none;">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary" role="status"></div>
+                    <span class="text-muted small ms-2">
+                        Generating SHAP plot...
+                    </span>
+                </div>
+                <img id="shapImage"
+                     src="" alt="SHAP Plot"
+                     class="img-fluid rounded-3"
+                     style="border:1px solid var(--border);
+                            display:none;"/>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // ================================================
+    // Clinical advice per risk level
+    // ================================================
+    const advice = {
+        0: "Patient shows low CHD risk. Continue routine monitoring, encourage healthy lifestyle habits and annual checkups.",
+        1: "Patient shows moderate CHD risk. Consider lifestyle intervention, closer monitoring of cholesterol and blood pressure levels.",
+        2: "Patient shows high CHD risk. Immediate clinical attention recommended. Consider further cardiovascular investigations and treatment."
+    };
+
+    const riskIcons = {
+        0: `<div style="width:80px;height:80px;border-radius:50%;background:#C6F6D5;display:flex;align-items:center;justify-content:center;"><i class="bi bi-shield-check" style="font-size:2rem;color:#38A169;"></i></div>`,
+        1: `<div style="width:80px;height:80px;border-radius:50%;background:#FEFCBF;display:flex;align-items:center;justify-content:center;"><i class="bi bi-exclamation-circle" style="font-size:2rem;color:#D69E2E;"></i></div>`,
+        2: `<div style="width:80px;height:80px;border-radius:50%;background:#FED7D7;display:flex;align-items:center;justify-content:center;"><i class="bi bi-exclamation-triangle-fill" style="font-size:2rem;color:#E53E3E;"></i></div>`
+    };
+
+    const riskBadgeStyle = {
+        0: "background:#C6F6D5;color:#276749;",
+        1: "background:#FEFCBF;color:#744210;",
+        2: "background:#FED7D7;color:#822727;"
+    };
+
+    const adviceColor = {
+        0: "#38A169",
+        1: "#D69E2E",
+        2: "#E53E3E"
+    };
+
+    // ================================================
+    // Update slider display value
+    // ================================================
+    function updateSlider(id, value) {
+        document.getElementById('val_' + id).textContent =
+            parseFloat(value).toFixed(
+                ['AGE'].includes(id) ? 0 : 1
+            );
+        runPrediction();
+    }
+
+    // ================================================
+    // Collect all current values
+    // ================================================
+    function collectData() {
+        return {
+            AGE:                   parseFloat(document.getElementById('AGE').value),
+            GENDER:                document.getElementById('GENDER').value,
+            SMOKING:               document.getElementById('SMOKING').value,
+            GLUCOSE:               parseFloat(document.getElementById('GLUCOSE').value),
+            TC:                    parseFloat(document.getElementById('TC').value),
+            TG:                    parseFloat(document.getElementById('TG').value),
+            LDL:                   parseFloat(document.getElementById('LDL').value),
+            HDL:                   parseFloat(document.getElementById('HDL').value),
+            BMI:                   parseFloat(document.getElementById('BMI').value),
+            WC:                    parseFloat(document.getElementById('WC').value),
+            BP_SYS:                parseFloat(document.getElementById('BP_SYS').value),
+            BP_DIAS:               parseFloat(document.getElementById('BP_DIAS').value),
+            HYPERCHOLESTEROLAEMIA: document.getElementById('HYPERCHOLESTEROLAEMIA').value,
+            DM:                    document.getElementById('DM').value,
+            HPT:                   document.getElementById('HPT').value,
+        };
+    }
+
+    // ================================================
+    // Debounce to avoid too many requests
+    // ================================================
+    let debounceTimer = null;
+    function runPrediction() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchPrediction, 300);
+    }
+
+    // ================================================
+    // AJAX call to Flask prediction endpoint
+    // ================================================
+    function fetchPrediction() {
+        const data = collectData();
+        document.getElementById('loadingSpinner').style.display = 'block';
+
+        fetch('/patients/scenario/predict', {
+            method:  'POST',
+            headers: {'Content-Type': 'application/json'},
+            body:    JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(result => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+
+            if (!result.success) {
+                console.error('Prediction error:', result.error);
+                return;
+            }
+
+            const p = result.prediction;
+
+            // Update icon
+            document.getElementById('riskIcon').innerHTML =
+                riskIcons[p];
+
+            // Update badge
+            document.getElementById('riskLabel').innerHTML =
+                `<span class="risk-badge"
+                       style="${riskBadgeStyle[p]}">
+                    ${result.label}
+                 </span>`;
+
+            // Update probability bars
+            document.getElementById('prob_low_text').textContent =
+                result.prob_low + '%';
+            document.getElementById('prob_low_bar').style.width =
+                result.prob_low + '%';
+
+            document.getElementById('prob_mod_text').textContent =
+                result.prob_moderate + '%';
+            document.getElementById('prob_mod_bar').style.width =
+                result.prob_moderate + '%';
+
+            document.getElementById('prob_high_text').textContent =
+                result.prob_high + '%';
+            document.getElementById('prob_high_bar').style.width =
+                result.prob_high + '%';
+
+            // Update advice
+            document.getElementById('adviceTitle').style.color =
+                adviceColor[p];
+            document.getElementById('adviceText').textContent =
+                advice[p];
+
+            // Update SHAP plot
+            if (result.shap_path) {
+                const shapCard  = document.getElementById('shapCard');
+                const shapImg   = document.getElementById('shapImage');
+                const shapLoad  = document.getElementById('shapLoading');
+
+                shapCard.style.display  = 'block';
+                shapLoad.style.display  = 'block';
+                shapImg.style.display   = 'none';
+
+                // Add timestamp to bust cache since filename changes
+                shapImg.onload = function() {
+                    shapLoad.style.display = 'none';
+                    shapImg.style.display  = 'block';
+                };
+                shapImg.onerror = function() {
+                    shapLoad.style.display = 'none';
+                };
+                shapImg.src = '/static/' + result.shap_path +
+                              '?t=' + Date.now();
+            }
+        })
+        .catch(err => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            console.error('Fetch error:', err);
+        });
+    }
+
+    // Run prediction on page load
+    window.onload = function() { fetchPrediction(); };
+</script>
+{% endblock %}

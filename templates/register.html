@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Register — Heartfy{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="min-height:90vh; display:flex; align-items:center;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-6 col-lg-5">
+
+            <div class="text-center mb-4">
+                <i class="bi bi-heart-pulse-fill" style="font-size:2.5rem; color:var(--primary);"></i>
+                <h4 class="fw-bold mt-2">Create Account</h4>
+                <p class="text-muted small">Register as a medical professional</p>
+            </div>
+
+            <div class="card p-4">
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input type="text" name="username" class="form-control"
+                               placeholder="e.g. dr_ahmad" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email Address</label>
+                        <input type="email" name="email" class="form-control"
+                               placeholder="doctor@hospital.com" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Password</label>
+                        <div class="input-group">
+                            <input type="password" name="password" id="regPassword"
+                                   class="form-control" placeholder="Min. 6 characters" required/>
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('regPassword', 'eyeIconReg')">
+                                <i class="bi bi-eye" id="eyeIconReg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Confirm Password</label>
+                        <div class="input-group">
+                            <input type="password" name="confirm_password" id="regConfirm"
+                                   class="form-control" placeholder="Re-enter your password" required/>
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('regConfirm', 'eyeIconConfirm')">
+                                <i class="bi bi-eye" id="eyeIconConfirm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 mt-2">
+                        <i class="bi bi-person-check me-2"></i>Create Account
+                    </button>
+                </form>
+            </div>
+
+            <p class="text-center mt-3 text-muted small">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}" style="color:var(--primary);">Login here</a>
+            </p>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function togglePassword(fieldId, iconId) {
+        const field = document.getElementById(fieldId);
+        const icon  = document.getElementById(iconId);
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+</script>
+{% endblock %}

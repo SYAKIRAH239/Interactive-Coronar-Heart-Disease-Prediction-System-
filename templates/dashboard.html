@@ -1,0 +1,1908 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Heartfy{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .stat-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        background: var(--card-bg);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+
+    .chart-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        height: 100%;
+    }
+    .chart-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 4px;
+    }
+    .chart-subtitle {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    /* D3 tooltip */
+    .d3-tooltip {
+        position: absolute;
+        background: rgba(30,40,55,0.92);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 999;
+        line-height: 1.5;
+    }
+
+    /* Loading spinner for charts */
+    .chart-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 280px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        gap: 10px;
+    }
+
+    /* Map */
+    #map-container {
+        width: 100%;
+        height: 420px;
+        position: relative;
+    }
+    #map-container svg { width: 100%; height: 100%; }
+    .state-path {
+        stroke: white;
+        stroke-width: 1;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+    .state-path:hover { opacity: 0.75; }
+    .map-legend {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .map-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .map-legend-color {
+        width: 14px; height: 14px;
+        border-radius: 3px;
+    }
+
+    /* Population pyramid */
+    .pyramid-bar { cursor: pointer; }
+    .pyramid-bar:hover { opacity: 0.75; }
+
+    /* Heatmap */
+    .heatmap-cell { cursor: pointer; }
+    .heatmap-cell:hover { stroke: #2D3748; stroke-width: 2; }
+
+    /* Recent patients table */
+    .recent-table th {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .recent-table td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header d-flex justify-content-between
+            align-items-start mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-grid-1x2-fill me-2"
+               style="color:var(--primary);"></i>Dashboard
+        </h4>
+        <p class="text-muted small mb-0">
+            Welcome back, <strong>{{ current_user.username }}</strong>.
+            Dataset overview — 5,449 patients from MyHEBAT.
+        </p>
+    </div>
+    <span class="badge rounded-pill px-3 py-2"
+          style="background:var(--primary-light);
+                 color:var(--primary);font-size:0.78rem;">
+        <i class="bi bi-database me-1"></i>Live Dataset
+    </span>
+</div>
+
+
+<!-- ================================================
+     SECTION 2: Dataset Summary Cards
+================================================ -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <h3 class="fw-bold mb-0"
+                style="color:var(--primary);">5,449</h3>
+            <p class="text-muted small mb-0">Total Dataset Patients</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <h3 class="fw-bold mb-0"
+                style="color:#38A169;" id="stat-low">—</h3>
+            <p class="text-muted small mb-0">Low Risk in Dataset</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <h3 class="fw-bold mb-0"
+                style="color:#D69E2E;" id="stat-mod">—</h3>
+            <p class="text-muted small mb-0">Moderate Risk</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <h3 class="fw-bold mb-0"
+                style="color:#E53E3E;" id="stat-high">—</h3>
+            <p class="text-muted small mb-0">High Risk</p>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 3: CHD Distribution + Gender
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-5">
+        <div class="chart-card">
+            <p class="chart-title">CHD Risk Distribution</p>
+            <p class="chart-subtitle">
+                Overall risk categorisation across dataset
+            </p>
+            <div id="donut-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="chart-card">
+            <p class="chart-title">Gender Breakdown by CHD Risk</p>
+            <p class="chart-subtitle">
+                Male vs Female distribution across risk levels
+            </p>
+            <div id="gender-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 4: Population Pyramid
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="chart-card">
+            <p class="chart-title">
+                Population Pyramid — Age, Gender & CHD Risk
+            </p>
+            <p class="chart-subtitle">
+                Age group distribution by gender,
+                coloured by CHD risk outcome
+            </p>
+            <div id="pyramid-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 5: Malaysia Choropleth Map
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="chart-card">
+            <p class="chart-title">
+                Patient Distribution by State (Malaysia)
+            </p>
+            <p class="chart-subtitle">
+                Hover over a state to see CHD risk breakdown.
+                Colour intensity represents total patient count.
+            </p>
+            <div id="map-container">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading map...
+                </div>
+            </div>
+            <div class="map-legend" id="map-legend"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 6: Age Group + BMI
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="chart-card">
+            <p class="chart-title">Age Group vs CHD Risk</p>
+            <p class="chart-subtitle">
+                Risk distribution across age categories
+            </p>
+            <div id="age-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-card">
+            <p class="chart-title">BMI Distribution by CHD Risk</p>
+            <p class="chart-subtitle">
+                BMI spread across Low, Moderate, High risk groups
+            </p>
+            <div id="bmi-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 7: Multimorbidity UpSet Plot
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="chart-card">
+            <p class="chart-title">
+                Multimorbidity UpSet Plot
+            </p>
+            <p class="chart-subtitle">
+                Co-occurrence of DM, HPT, Hypercholesterolaemia
+                and CHD across patients.
+                Only combinations with 2+ conditions are shown.
+            </p>
+
+            <!-- Risk Slicer -->
+            <div class="d-flex gap-2 mb-3 flex-wrap">
+                <button class="btn btn-sm upset-filter active"
+                        data-risk="All"
+                        style="border-radius:20px;font-size:0.8rem;
+                            background:#EBF4FF;color:#4A90D9;
+                            border:1.5px solid #4A90D9;font-weight:600;">
+                    All Risks
+                </button>
+                <button class="btn btn-sm upset-filter"
+                        data-risk="Low Risk"
+                        style="border-radius:20px;font-size:0.8rem;
+                            background:white;color:#38A169;
+                            border:1.5px solid #38A169;font-weight:600;">
+                    🟢 Low Risk
+                </button>
+                <button class="btn btn-sm upset-filter"
+                        data-risk="Moderate Risk"
+                        style="border-radius:20px;font-size:0.8rem;
+                            background:white;color:#D69E2E;
+                            border:1.5px solid #D69E2E;font-weight:600;">
+                    🟡 Moderate Risk
+                </button>
+                <button class="btn btn-sm upset-filter"
+                        data-risk="High Risk"
+                        style="border-radius:20px;font-size:0.8rem;
+                            background:white;color:#E53E3E;
+                            border:1.5px solid #E53E3E;font-weight:600;">
+                    🔴 High Risk
+                </button>
+            </div>
+
+            <div id="upset-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 8: Cholesterol Levels
+================================================ -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="chart-card">
+            <p class="chart-title">
+                Cholesterol Levels by CHD Risk
+            </p>
+            <p class="chart-subtitle">
+                TC, LDL and HDL distribution
+                across risk categories (box plots)
+            </p>
+            <div id="chol-chart">
+                <div class="chart-loading">
+                    <div class="spinner-border spinner-border-sm
+                                text-primary"></div>
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION 9: Recent Patients
+================================================ -->
+<div class="chart-card mb-4">
+    <div class="d-flex justify-content-between
+                align-items-center mb-3">
+        <div>
+            <p class="chart-title mb-0">My Recent Patients</p>
+            <p class="chart-subtitle mb-0">
+                Last 5 patients you registered
+            </p>
+        </div>
+        <a href="{{ url_for('patient.patient_list') }}"
+           class="btn btn-outline-primary btn-sm">
+            View All
+        </a>
+    </div>
+
+    {% if recent_patients %}
+    <table class="table recent-table mb-0">
+        <thead>
+            <tr>
+                <th>Name</th><th>Gender</th><th>Age</th>
+                <th>CHD Risk</th><th>Date</th><th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in recent_patients %}
+            <tr>
+                <td class="fw-semibold">{{ p.name }}</td>
+                <td>{{ 'Male' if p.gender==0 else 'Female' }}</td>
+                <td>{{ p.age }}</td>
+                <td>
+                    {% if p.prediction_outcome == 0 %}
+                        <span class="badge-low">Low Risk</span>
+                    {% elif p.prediction_outcome == 1 %}
+                        <span class="badge-moderate">
+                            Moderate Risk
+                        </span>
+                    {% elif p.prediction_outcome == 2 %}
+                        <span class="badge-high">High Risk</span>
+                    {% else %}
+                        <span class="text-muted small">
+                            Not predicted
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-muted small">
+                    {% if p.prediction_date %}
+                        {{ p.prediction_date.strftime('%d %b %Y') }}
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('patient.patient_list') }}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4">
+        <i class="bi bi-people"
+           style="font-size:2.5rem;color:var(--border);"></i>
+        <p class="text-muted mt-2 small">No patients yet.</p>
+        <a href="{{ url_for('patient.new_patient') }}"
+           class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i>Add Patient
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Tooltip -->
+<div class="d3-tooltip" id="d3-tooltip"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- D3.js v7 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+<script>
+// ================================================
+// Config
+// ================================================
+const COLORS = {
+    low:      '#38A169',
+    moderate: '#D69E2E',
+    high:     '#E53E3E',
+    lowBg:    '#C6F6D5',
+    modBg:    '#FEFCBF',
+    highBg:   '#FED7D7',
+    primary:  '#4A90D9',
+    muted:    '#718096',
+    border:   '#E2E8F0',
+    softBg:   '#F7FAFC'
+};
+
+const RISK_COLOR = d => d === 'Low Risk' ? COLORS.low
+                      : d === 'Moderate Risk' ? COLORS.moderate
+                      : COLORS.high;
+
+const tooltip = d3.select('#d3-tooltip');
+
+function showTip(html, event) {
+    tooltip.html(html)
+           .style('opacity', 1)
+           .style('left', (event.pageX + 14) + 'px')
+           .style('top',  (event.pageY - 28) + 'px');
+}
+function hideTip() {
+    tooltip.style('opacity', 0);
+}
+
+// ================================================
+// Load data once, draw all charts
+// ================================================
+d3.json('/api/dataset').then(data => {
+
+    // ── Summary stats ──────────────────────────
+    const riskCounts = d3.rollup(
+        data, v => v.length, d => d.CHD_FINAL_CATEGORISATION
+    );
+    document.getElementById('stat-low').textContent =
+        (riskCounts.get('Low Risk') || 0).toLocaleString();
+    document.getElementById('stat-mod').textContent =
+        (riskCounts.get('Moderate Risk') || 0).toLocaleString();
+    document.getElementById('stat-high').textContent =
+        (riskCounts.get('High Risk') || 0).toLocaleString();
+
+    // Draw all charts
+    drawDonut(data);
+    drawGender(data);
+    drawPyramid(data);
+    drawAgeChart(data);
+    drawBMI(data);
+    drawUpSet(data);
+    drawCholesterol(data);
+    drawMap(data);
+
+}).catch(err => {
+    console.error('Data load error:', err);
+});
+
+// ================================================
+// 1. Donut Chart — CHD Risk Distribution
+// ================================================
+function drawDonut(data) {
+    const el  = document.getElementById('donut-chart');
+    el.innerHTML = '';
+    const W = el.clientWidth || 340, H = 280;
+    const R = Math.min(W, H) / 2 - 20;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width', W).attr('height', H);
+
+    const g = svg.append('g')
+        .attr('transform',
+              `translate(${W/2 - 60}, ${H/2})`);
+
+    const counts = d3.rollup(
+        data, v => v.length, d => d.CHD_FINAL_CATEGORISATION
+    );
+    const pie = d3.pie().value(d => d[1])
+                  .sort(null);
+    const arc = d3.arc().innerRadius(R*0.58)
+                        .outerRadius(R);
+    const hArc= d3.arc().innerRadius(R*0.58)
+                        .outerRadius(R+6);
+
+    const slices = g.selectAll('path')
+        .data(pie([...counts]))
+        .join('path')
+        .attr('d', arc)
+        .attr('fill', d => RISK_COLOR(d.data[0]))
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2)
+        .style('cursor','pointer');
+
+    slices.on('mouseover', function(event, d) {
+        d3.select(this).attr('d', hArc);
+        const pct = ((d.data[1]/data.length)*100).toFixed(1);
+        showTip(`<b>${d.data[0]}</b><br>
+                 ${d.data[1].toLocaleString()} patients
+                 (${pct}%)`, event);
+    }).on('mousemove', (e,d) => {
+        const pct = ((d.data[1]/data.length)*100).toFixed(1);
+        showTip(`<b>${d.data[0]}</b><br>
+                 ${d.data[1].toLocaleString()} patients
+                 (${pct}%)`, e);
+    }).on('mouseout', function(e,d) {
+        d3.select(this).attr('d', arc);
+        hideTip();
+    });
+
+    // Centre text
+    g.append('text').attr('text-anchor','middle')
+     .attr('dy','-0.3em')
+     .style('font-size','1.6rem')
+     .style('font-weight','800')
+     .style('fill','#2D3748')
+     .text(data.length.toLocaleString());
+    g.append('text').attr('text-anchor','middle')
+     .attr('dy','1.2em')
+     .style('font-size','0.72rem')
+     .style('fill',COLORS.muted)
+     .text('Total Patients');
+
+    // Legend (right side)
+    const legend = svg.append('g')
+        .attr('transform', `translate(${W/2 + R - 20}, ${H/2 - 40})`);
+    [...counts].forEach(([label, count], i) => {
+        const y = i * 36;
+        legend.append('rect')
+            .attr('x',0).attr('y',y)
+            .attr('width',12).attr('height',12)
+            .attr('rx',3)
+            .attr('fill', RISK_COLOR(label));
+        legend.append('text')
+            .attr('x',18).attr('y',y+10)
+            .style('font-size','0.75rem')
+            .style('fill','#2D3748')
+            .text(label);
+        legend.append('text')
+            .attr('x',18).attr('y',y+22)
+            .style('font-size','0.7rem')
+            .style('fill',COLORS.muted)
+            .text(`${count.toLocaleString()} (${((count/data.length)*100).toFixed(1)}%)`);
+    });
+}
+
+// ================================================
+// 2. Gender Stacked Bar
+// ================================================
+function drawGender(data) {
+    const el = document.getElementById('gender-chart');
+    el.innerHTML = '';
+    const W  = el.clientWidth || 500;
+    const H  = 260;
+    const margin = {top:10,right:20,bottom:50,left:50};
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top  - margin.bottom;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width',W).attr('height',H)
+        .append('g')
+        .attr('transform',
+              `translate(${margin.left},${margin.top})`);
+
+    const risks  = ['Low Risk','Moderate Risk','High Risk'];
+    const genders= ['Male','Female'];
+
+    const grouped = d3.rollup(
+        data,
+        v => d3.rollup(v, vv => vv.length,
+                       d => d.CHD_FINAL_CATEGORISATION),
+        d => d.GENDER
+    );
+
+    const chartData = genders.map(g => {
+        const obj = {gender: g};
+        risks.forEach(r => {
+            obj[r] = grouped.get(g)?.get(r) || 0;
+        });
+        return obj;
+    });
+
+    const x = d3.scaleBand()
+        .domain(genders).range([0,iW]).padding(0.35);
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(chartData, d =>
+            risks.reduce((s,r) => s+d[r], 0))])
+        .nice().range([iH,0]);
+
+    // Grid lines
+    svg.append('g').attr('class','grid')
+       .call(d3.axisLeft(y).tickSize(-iW).tickFormat(''))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('line')
+                   .style('stroke',COLORS.border)
+                   .style('stroke-dasharray','3,3'));
+
+    const stack = d3.stack().keys(risks);
+    const series= stack(chartData);
+
+    svg.selectAll('.serie')
+       .data(series)
+       .join('g')
+       .attr('fill', d => RISK_COLOR(d.key))
+       .selectAll('rect')
+       .data(d => d)
+       .join('rect')
+       .attr('x', d => x(d.data.gender))
+       .attr('y', d => y(d[1]))
+       .attr('height', d => y(d[0]) - y(d[1]))
+       .attr('width', x.bandwidth())
+       .attr('rx', 4)
+       .on('mouseover', (event, d) => {
+           const r = d3.select(event.target.parentNode).datum().key;
+           showTip(`<b>${d.data.gender}</b><br>
+                    ${r}: ${d.data[r].toLocaleString()}`, event);
+       })
+       .on('mousemove', (event, d) => {
+           const r = d3.select(event.target.parentNode).datum().key;
+           showTip(`<b>${d.data.gender}</b><br>
+                    ${r}: ${d.data[r].toLocaleString()}`, event);
+       })
+       .on('mouseout', hideTip);
+
+    svg.append('g').attr('transform',`translate(0,${iH})`)
+       .call(d3.axisBottom(x))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .style('font-size','0.8rem')
+                   .style('fill',COLORS.muted));
+
+    svg.append('g').call(d3.axisLeft(y).ticks(5))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .style('font-size','0.75rem')
+                   .style('fill',COLORS.muted));
+
+    // Legend
+    const leg = svg.append('g')
+        .attr('transform', `translate(${iW/2 - 160}, ${iH+36})`);
+    risks.forEach((r, i) => {
+        leg.append('rect')
+           .attr('x', i*120).attr('y',0)
+           .attr('width',10).attr('height',10).attr('rx',2)
+           .attr('fill', RISK_COLOR(r));
+        leg.append('text')
+           .attr('x', i*120+14).attr('y',9)
+           .style('font-size','0.72rem')
+           .style('fill',COLORS.muted)
+           .text(r);
+    });
+}
+
+// ================================================
+// 3. Population Pyramid
+// ================================================
+function drawPyramid(data) {
+    const el = document.getElementById('pyramid-chart');
+    el.innerHTML = '';
+    const W  = el.clientWidth || 700;
+    const H  = 360;
+    const margin = {top:10,right:120,bottom:40,left:120};
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top  - margin.bottom;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width',W).attr('height',H)
+        .append('g')
+        .attr('transform',
+              `translate(${margin.left},${margin.top})`);
+
+    const ageOrder = [
+        '<40 (Young Adult)',
+        '40-49 (Early Middle Age)',
+        '50-59 (Late Middle Age)',
+        '60-69 (Senior)',
+        '70+ (Elderly)'
+    ];
+    const risks = ['Low Risk','Moderate Risk','High Risk'];
+
+    // Group by age, gender, risk
+    const ageBands = ageOrder.map(age => {
+        const males   = data.filter(d =>
+            d.AGE_GROUP === age && d.GENDER === 'Male');
+        const females = data.filter(d =>
+            d.AGE_GROUP === age && d.GENDER === 'Female');
+        const obj = {age};
+        risks.forEach(r => {
+            obj[`M_${r}`] = males.filter(
+                d => d.CHD_FINAL_CATEGORISATION === r).length;
+            obj[`F_${r}`] = females.filter(
+                d => d.CHD_FINAL_CATEGORISATION === r).length;
+        });
+        obj.totalM = males.length;
+        obj.totalF = females.length;
+        return obj;
+    });
+
+    const maxVal = d3.max(ageBands,
+        d => Math.max(d.totalM, d.totalF));
+
+    const xLeft  = d3.scaleLinear()
+        .domain([0, maxVal]).range([iW/2 - 10, 0]);
+    const xRight = d3.scaleLinear()
+        .domain([0, maxVal]).range([iW/2 + 10, iW]);
+    const y = d3.scaleBand()
+        .domain(ageOrder).range([0, iH]).padding(0.25);
+
+    // Grid
+    svg.append('g').call(
+        d3.axisBottom(xLeft).ticks(4).tickSize(-iH).tickFormat('')
+    ).attr('transform',`translate(0,${iH})`)
+     .call(g => g.select('.domain').remove())
+     .call(g => g.selectAll('line')
+                 .style('stroke',COLORS.border)
+                 .style('stroke-dasharray','3,3'));
+
+    // Centre line
+    svg.append('line')
+       .attr('x1', iW/2).attr('x2', iW/2)
+       .attr('y1', 0).attr('y2', iH)
+       .style('stroke',COLORS.border)
+       .style('stroke-width',1);
+
+    // Stacked bars — Male (left)
+    const maleStack = d3.stack()
+        .keys(risks.map(r => `M_${r}`))(ageBands);
+
+    svg.selectAll('.male-bar')
+       .data(maleStack)
+       .join('g')
+       .attr('fill', d => RISK_COLOR(d.key.replace('M_','')))
+       .attr('opacity', 0.85)
+       .selectAll('rect')
+       .data(d => d)
+       .join('rect')
+       .attr('x', d => xLeft(d[1]))
+       .attr('y', d => y(d.data.age))
+       .attr('width', d => xLeft(d[0]) - xLeft(d[1]))
+       .attr('height', y.bandwidth())
+       .attr('rx', 2)
+       .on('mouseover', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key.replace('M_','');
+           showTip(`<b>Male · ${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data['M_'+r]}
+                    <br>Total: ${d.data.totalM}`, event);
+       })
+       .on('mousemove', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key.replace('M_','');
+           showTip(`<b>Male · ${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data['M_'+r]}
+                    <br>Total: ${d.data.totalM}`, event);
+       })
+       .on('mouseout', hideTip);
+
+    // Stacked bars — Female (right)
+    const femaleStack = d3.stack()
+        .keys(risks.map(r => `F_${r}`))(ageBands);
+
+    svg.selectAll('.female-bar')
+       .data(femaleStack)
+       .join('g')
+       .attr('fill', d => RISK_COLOR(d.key.replace('F_','')))
+       .selectAll('rect')
+       .data(d => d)
+       .join('rect')
+       .attr('x', d => xRight(d[0]))
+       .attr('y', d => y(d.data.age))
+       .attr('width', d => xRight(d[1]) - xRight(d[0]))
+       .attr('height', y.bandwidth())
+       .attr('rx', 2)
+       .on('mouseover', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key.replace('F_','');
+           showTip(`<b>Female · ${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data['F_'+r]}
+                    <br>Total: ${d.data.totalF}`, event);
+       })
+       .on('mousemove', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key.replace('F_','');
+           showTip(`<b>Female · ${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data['F_'+r]}
+                    <br>Total: ${d.data.totalF}`, event);
+       })
+       .on('mouseout', hideTip);
+
+    // Y axis (centre)
+    svg.append('g')
+       .attr('transform',`translate(${iW/2},0)`)
+       .call(d3.axisLeft(y).tickSize(0))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .attr('x', 0)
+                   .style('text-anchor','middle')
+                   .style('font-size','0.7rem')
+                   .style('fill',COLORS.muted)
+                   .text(d => d.split(' ')[0]));
+
+    // X axis labels
+    svg.append('g').attr('transform',`translate(0,${iH})`)
+       .call(d3.axisBottom(xLeft).ticks(4)
+               .tickFormat(d3.format('d')))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .style('font-size','0.7rem')
+                   .style('fill',COLORS.muted));
+
+    svg.append('g').attr('transform',`translate(0,${iH})`)
+       .call(d3.axisBottom(xRight).ticks(4)
+               .tickFormat(d3.format('d')))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .style('font-size','0.7rem')
+                   .style('fill',COLORS.muted));
+
+    // Labels
+    svg.append('text')
+       .attr('x', iW/4).attr('y', -2)
+       .attr('text-anchor','middle')
+       .style('font-size','0.78rem')
+       .style('font-weight','600')
+       .style('fill','#4A90D9')
+       .text('← Male');
+    svg.append('text')
+       .attr('x', 3*iW/4).attr('y', -2)
+       .attr('text-anchor','middle')
+       .style('font-size','0.78rem')
+       .style('font-weight','600')
+       .style('fill','#9F7AEA')
+       .text('Female →');
+
+    // Legend
+    const leg = svg.append('g')
+        .attr('transform',
+              `translate(${iW + 10}, ${iH/2 - 40})`);
+    ['Low Risk','Moderate Risk','High Risk'].forEach((r,i) => {
+        leg.append('rect')
+           .attr('y', i*22).attr('width',10).attr('height',10)
+           .attr('rx',2).attr('fill',RISK_COLOR(r));
+        leg.append('text')
+           .attr('x',14).attr('y',i*22+9)
+           .style('font-size','0.7rem')
+           .style('fill',COLORS.muted)
+           .text(r);
+    });
+}
+
+// ================================================
+// 4. Malaysia Choropleth Map (D3) — Fixed Version
+// ================================================
+function drawMap(data) {
+    const el = document.getElementById('map-container');
+    el.innerHTML = '';
+
+    // State name mapping CSV → GeoJSON shapeName
+    const stateMap = {
+        'Melaka':            'Malacca',
+        'NS':                'Negeri Sembilan',
+        'Negeri Sembilan':   'Negeri Sembilan',
+        'Pulau Pinang':      'Penang',
+        'P.Pinang':          'Penang',
+        'KL':                'Kuala Lumpur',
+        'W.P. Kuala Lumpur': 'Kuala Lumpur',
+        'W.P. Putrajaya':    'Putrajaya',
+        'W.P. Labuan':       'Labuan',
+        'Johor':             'Johor',
+        'Kedah':             'Kedah',
+        'Kelantan':          'Kelantan',
+        'Pahang':            'Pahang',
+        'Perak':             'Perak',
+        'Perlis':            'Perlis',
+        'Sabah':             'Sabah',
+        'Sarawak':           'Sarawak',
+        'Selangor':          'Selangor',
+        'Terengganu':        'Terengganu',
+    };
+
+    // Build state risk counts from data
+    const stateCounts = {};
+    data.forEach(d => {
+        const raw   = d.STATE || '';
+        const state = stateMap[raw] || raw;
+        if (!stateCounts[state]) {
+            stateCounts[state] = {
+                total:0, low:0, moderate:0, high:0
+            };
+        }
+        stateCounts[state].total++;
+        const r = d.CHD_FINAL_CATEGORISATION;
+        if (r === 'Low Risk')          stateCounts[state].low++;
+        else if (r === 'Moderate Risk')stateCounts[state].moderate++;
+        else if (r === 'High Risk')    stateCounts[state].high++;
+    });
+
+    const maxCount = Math.max(
+        ...Object.values(stateCounts).map(s => s.total), 1
+    );
+
+    const colorScale = d3.scaleSequential()
+        .domain([0, maxCount])
+        .interpolator(d3.interpolateBlues);
+
+    const W = el.clientWidth || 800;
+    const H = 420;
+
+    const svg = d3.select(el).append('svg')
+        .attr('viewBox', `0 0 ${W} ${H}`)
+        .attr('width', '100%')
+        .attr('height', H)
+        .style('background', '#F7FAFC')
+        .style('border-radius', '12px');
+
+    const mapG = svg.append('g');
+
+    // ── Load GeoJSON ──
+    d3.json('/static/data/malaysia.geojson').then(geoData => {
+
+        console.log('GeoJSON loaded:', geoData.features.length,
+                    'features');
+
+        // Auto-fit projection to GeoJSON bounds
+        const projection = d3.geoMercator()
+            .fitSize([W, H], geoData);
+
+        const path = d3.geoPath().projection(projection);
+
+        // ── Zoom behaviour ──
+        const zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .on('zoom', event => {
+                mapG.attr('transform', event.transform);
+            });
+        svg.call(zoom);
+
+        // ── Draw states ──
+        mapG.selectAll('.state-path')
+            .data(geoData.features)
+            .join('path')
+            .attr('class', 'state-path')
+            .attr('d', path)
+            .attr('fill', d => {
+                const name  = d.properties.shapeName;
+                const count = stateCounts[name]?.total || 0;
+                return count > 0
+                       ? colorScale(count)
+                       : '#E2E8F0';
+            })
+            .attr('stroke', 'white')
+            .attr('stroke-width', 0.8)
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                const name = d.properties.shapeName;
+                const s    = stateCounts[name] ||
+                             {total:0,low:0,moderate:0,high:0};
+                d3.select(this)
+                  .attr('stroke', '#2D3748')
+                  .attr('stroke-width', 2)
+                  .attr('opacity', 0.85);
+                showTip(
+                    `<b>${name}</b><br>
+                     Total Patients: <b>${s.total}</b><br>
+                     🟢 Low Risk: ${s.low}<br>
+                     🟡 Moderate Risk: ${s.moderate}<br>
+                     🔴 High Risk: ${s.high}`,
+                    event
+                );
+            })
+            .on('mousemove', (event, d) => {
+                const name = d.properties.shapeName;
+                const s    = stateCounts[name] ||
+                             {total:0,low:0,moderate:0,high:0};
+                showTip(
+                    `<b>${name}</b><br>
+                     Total Patients: <b>${s.total}</b><br>
+                     🟢 Low Risk: ${s.low}<br>
+                     🟡 Moderate Risk: ${s.moderate}<br>
+                     🔴 High Risk: ${s.high}`,
+                    event
+                );
+            })
+            .on('mouseout', function() {
+                d3.select(this)
+                  .attr('stroke', 'white')
+                  .attr('stroke-width', 0.8)
+                  .attr('opacity', 1);
+                hideTip();
+            })
+            .on('click', function(event, d) {
+                // Zoom to clicked state bounding box
+                const bounds  = path.bounds(d);
+                const dx      = bounds[1][0] - bounds[0][0];
+                const dy      = bounds[1][1] - bounds[0][1];
+                const cx      = (bounds[0][0] + bounds[1][0]) / 2;
+                const cy      = (bounds[0][1] + bounds[1][1]) / 2;
+                const scale   = Math.min(
+                    10,
+                    0.85 / Math.max(dx / W, dy / H)
+                );
+                const tx = W / 2 - scale * cx;
+                const ty = H / 2 - scale * cy;
+
+                svg.transition().duration(750).call(
+                    zoom.transform,
+                    d3.zoomIdentity.translate(tx, ty).scale(scale)
+                );
+            });
+
+        // ── State name labels ──
+        const abbr = {
+            'Negeri Sembilan': 'N.S.',
+            'Kuala Lumpur':    'KL',
+            'Putrajaya':       'PJY',
+            'Labuan':          'LBN',
+        };
+
+        mapG.selectAll('.state-label')
+            .data(geoData.features)
+            .join('text')
+            .attr('class', 'state-label')
+            .attr('transform', d => {
+                const c = path.centroid(d);
+                return `translate(${c[0]},${c[1]})`;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('dy', '0.35em')
+            .style('font-size', '7px')
+            .style('font-weight', '600')
+            .style('fill', '#2D3748')
+            .style('pointer-events', 'none')
+            .text(d => {
+                const n = d.properties.shapeName;
+                return abbr[n] || n;
+            });
+
+        // ── Reset zoom button ──
+        const resetBtn = svg.append('g')
+            .attr('transform', `translate(${W - 80}, 12)`)
+            .style('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition().duration(500).call(
+                    zoom.transform,
+                    d3.zoomIdentity
+                );
+            });
+
+        resetBtn.append('rect')
+            .attr('width', 70).attr('height', 24)
+            .attr('rx', 6)
+            .attr('fill', 'white')
+            .attr('stroke', '#E2E8F0')
+            .attr('stroke-width', 1);
+
+        resetBtn.append('text')
+            .attr('x', 35).attr('y', 16)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '0.65rem')
+            .style('fill', '#718096')
+            .text('↺ Reset Zoom');
+
+    }).catch(err => {
+        console.error('GeoJSON load error:', err);
+        el.innerHTML = `
+            <div class="chart-loading text-danger">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                Map failed to load: ${err.message}
+            </div>`;
+    });
+
+    // ── Colour legend ──
+    const legEl = document.getElementById('map-legend');
+    legEl.innerHTML = `
+        <div class="map-legend-item">
+            <div class="map-legend-color"
+                 style="background:#E2E8F0;"></div>
+            No data
+        </div>
+        <div class="map-legend-item">
+            <div class="map-legend-color"
+                 style="background:#C6DBEF;"></div>
+            Low
+        </div>
+        <div class="map-legend-item">
+            <div class="map-legend-color"
+                 style="background:#6BAED6;"></div>
+            Medium
+        </div>
+        <div class="map-legend-item">
+            <div class="map-legend-color"
+                 style="background:#08519C;"></div>
+            High
+        </div>
+        <div class="map-legend-item"
+             style="margin-left:16px;color:#718096;
+                    font-size:0.75rem;">
+            <i class="bi bi-hand-index me-1"></i>
+            Click a state to zoom · Scroll to pan
+        </div>
+    `;
+}
+
+// ================================================
+// 5. Age Group Bar Chart
+// ================================================
+function drawAgeChart(data) {
+    const el = document.getElementById('age-chart');
+    el.innerHTML = '';
+    const W  = el.clientWidth || 400;
+    const H  = 280;
+    const margin = {top:10,right:10,bottom:80,left:45};
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top  - margin.bottom;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width',W).attr('height',H)
+        .append('g')
+        .attr('transform',
+              `translate(${margin.left},${margin.top})`);
+
+    const ageOrder = [
+        '<40 (Young Adult)',
+        '40-49 (Early Middle Age)',
+        '50-59 (Late Middle Age)',
+        '60-69 (Senior)',
+        '70+ (Elderly)'
+    ];
+    const risks = ['Low Risk','Moderate Risk','High Risk'];
+
+    const grouped = d3.rollup(
+        data,
+        v => d3.rollup(v, vv => vv.length,
+                       d => d.CHD_FINAL_CATEGORISATION),
+        d => d.AGE_GROUP
+    );
+
+    const chartData = ageOrder.map(age => {
+        const obj = {age};
+        risks.forEach(r => {
+            obj[r] = grouped.get(age)?.get(r) || 0;
+        });
+        return obj;
+    });
+
+    const x = d3.scaleBand()
+        .domain(ageOrder).range([0,iW]).padding(0.3);
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(chartData, d =>
+            risks.reduce((s,r) => s+d[r], 0))])
+        .nice().range([iH,0]);
+
+    svg.append('g').call(
+        d3.axisLeft(y).ticks(5)
+    ).call(g => g.select('.domain').remove())
+     .call(g => g.selectAll('line')
+                 .style('stroke',COLORS.border))
+     .call(g => g.selectAll('text')
+                 .style('font-size','0.72rem')
+                 .style('fill',COLORS.muted));
+
+    const stack  = d3.stack().keys(risks);
+    const series = stack(chartData);
+
+    svg.selectAll('.bar-group')
+       .data(series)
+       .join('g')
+       .attr('fill', d => RISK_COLOR(d.key))
+       .selectAll('rect')
+       .data(d => d)
+       .join('rect')
+       .attr('x', d => x(d.data.age))
+       .attr('y', d => y(d[1]))
+       .attr('height', d => y(d[0]) - y(d[1]))
+       .attr('width', x.bandwidth())
+       .attr('rx', 2)
+       .on('mouseover', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key;
+           showTip(`<b>${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data[r]}`, event);
+       })
+       .on('mousemove', (event, d) => {
+           const r = d3.select(event.target.parentNode)
+                       .datum().key;
+           showTip(`<b>${d.data.age.split(' ')[0]}</b>
+                    <br>${r}: ${d.data[r]}`, event);
+       })
+       .on('mouseout', hideTip);
+
+    svg.append('g').attr('transform',`translate(0,${iH})`)
+       .call(d3.axisBottom(x)
+               .tickFormat(d => d.split(' ')[0]))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .attr('transform','rotate(-30)')
+                   .style('text-anchor','end')
+                   .style('font-size','0.7rem')
+                   .style('fill',COLORS.muted));
+}
+
+// ================================================
+// 6. BMI Histogram
+// ================================================
+function drawBMI(data) {
+    const el = document.getElementById('bmi-chart');
+    el.innerHTML = '';
+    const W  = el.clientWidth || 400;
+    const H  = 280;
+    const margin = {top:10,right:10,bottom:50,left:45};
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top  - margin.bottom;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width',W).attr('height',H)
+        .append('g')
+        .attr('transform',
+              `translate(${margin.left},${margin.top})`);
+
+    const risks = ['Low Risk','Moderate Risk','High Risk'];
+    const x = d3.scaleLinear()
+        .domain([d3.min(data,d=>+d.BMI)-1,
+                 d3.max(data,d=>+d.BMI)+1])
+        .range([0,iW]);
+
+    risks.forEach((risk, ri) => {
+        const rData = data.filter(
+            d => d.CHD_FINAL_CATEGORISATION === risk
+        );
+        const bins = d3.bin()
+            .value(d => +d.BMI)
+            .domain(x.domain())
+            .thresholds(20)(rData);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(bins, d => d.length)])
+            .range([iH,0]);
+
+        if (ri === 0) {
+            svg.append('g').attr('transform',
+                `translate(0,${iH})`)
+               .call(d3.axisBottom(x).ticks(8))
+               .call(g => g.select('.domain').remove())
+               .call(g => g.selectAll('text')
+                           .style('font-size','0.72rem')
+                           .style('fill',COLORS.muted));
+            svg.append('g').call(d3.axisLeft(y).ticks(4))
+               .call(g => g.select('.domain').remove())
+               .call(g => g.selectAll('text')
+                           .style('font-size','0.72rem')
+                           .style('fill',COLORS.muted));
+        }
+
+        svg.selectAll(`.bmi-bar-${ri}`)
+           .data(bins)
+           .join('rect')
+           .attr('x', d => x(d.x0)+1)
+           .attr('y', d => y(d.length))
+           .attr('width', d => Math.max(0,
+               x(d.x1)-x(d.x0)-1))
+           .attr('height', d => iH - y(d.length))
+           .attr('fill', RISK_COLOR(risk))
+           .attr('opacity', 0.65)
+           .on('mouseover', (event, d) => {
+               showTip(`<b>${risk}</b><br>
+                        BMI ${d.x0.toFixed(0)}–${d.x1.toFixed(0)}<br>
+                        Count: ${d.length}`, event);
+           })
+           .on('mousemove', (event, d) => {
+               showTip(`<b>${risk}</b><br>
+                        BMI ${d.x0.toFixed(0)}–${d.x1.toFixed(0)}<br>
+                        Count: ${d.length}`, event);
+           })
+           .on('mouseout', hideTip);
+    });
+
+    // Legend
+    const leg = svg.append('g')
+        .attr('transform',`translate(${iW-200},0)`);
+    risks.forEach((r,i) => {
+        leg.append('rect')
+           .attr('x',i*68).attr('width',10).attr('height',10)
+           .attr('rx',2).attr('fill',RISK_COLOR(r));
+        leg.append('text')
+           .attr('x',i*68+13).attr('y',9)
+           .style('font-size','0.68rem')
+           .style('fill',COLORS.muted)
+           .text(r.split(' ')[0]);
+    });
+}
+
+// ================================================
+// 7. Multimorbidity UpSet Plot with Risk Slicer
+// ================================================
+let upsetDataGlobal = null;
+
+function drawUpSet(data) {
+    upsetDataGlobal = data;
+    renderUpSet(data, 'All');
+
+    // Slicer button click handler
+    document.querySelectorAll('.upset-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active button styles
+            document.querySelectorAll('.upset-filter')
+                    .forEach(b => {
+                b.style.background = 'white';
+                b.classList.remove('active');
+            });
+            this.style.background = this.style.borderColor + '22';
+            this.classList.add('active');
+
+            const risk = this.dataset.risk;
+            renderUpSet(upsetDataGlobal, risk);
+        });
+    });
+}
+
+function renderUpSet(data, riskFilter) {
+    const el = document.getElementById('upset-chart');
+    el.innerHTML = '';
+
+    // ── 🟢 DYNAMIC LOGIC: Set label, match criteria, and theme colors based on current filter state ──
+    let chdLabel = 'CHD (High Risk)';
+    let chdMatchValue = 'High Risk';
+    let chdColor = COLORS.high || '#E53E3E'; // Default to red
+    
+    if (riskFilter === 'Moderate Risk') {
+        chdLabel = 'CHD (Moderate Risk)';
+        chdMatchValue = 'Moderate Risk';
+        chdColor = COLORS.moderate || '#D69E2E'; // 🟢 Switch elements to yellow
+    } else if (riskFilter === 'Low Risk') {
+        chdLabel = 'CHD (Low Risk)';
+        chdMatchValue = 'Low Risk';
+        chdColor = COLORS.low || '#38A169'; // 🟢 Switch elements to green
+    } else if (riskFilter === 'All') {
+        chdLabel = 'CHD (Any Risk Status)';
+        chdColor = COLORS.high || '#E53E3E';
+    }
+
+    const CONDITIONS = [
+        { key: 'DM',                    label: 'Diabetes (DM)',         color: '#4A90D9', activeVal: 'Yes' },
+        { key: 'HPT',                   label: 'Hypertension (HPT)',    color: '#9F7AEA', activeVal: 'Yes' },
+        { key: 'HYPERCHOLESTEROLAEMIA', label: 'Hypercholesterolaemia', color: '#5BBFBA', activeVal: 'Hypercholesterolaemia' },
+        { key: 'CHD_DYNAMIC',           label: chdLabel,                color: chdColor,  activeVal: 'Yes' }, // 🟢 Uses dynamic color variable
+    ];
+
+    // ── Enrich data dynamically ────────
+    const enriched = data.map(d => {
+        let isChdActive = 'No';
+        if (riskFilter === 'All') {
+            // Under "All", match patients with any elevated risk profile status
+            isChdActive = (d.CHD_FINAL_CATEGORISATION === 'High Risk' || d.CHD_FINAL_CATEGORISATION === 'Moderate Risk') ? 'Yes' : 'No';
+        } else {
+            // Otherwise match the exact category row level selected by user
+            isChdActive = (d.CHD_FINAL_CATEGORISATION === chdMatchValue) ? 'Yes' : 'No';
+        }
+        
+        return {
+            ...d,
+            CHD_DYNAMIC: isChdActive
+        };
+    });
+
+    // ── Filter by selected risk ──────────────────
+    const filtered = riskFilter === 'All'
+        ? enriched
+        : enriched.filter(d => d.CHD_FINAL_CATEGORISATION === riskFilter);
+
+    // ── Build combinations ───────────────────────
+    const comboCounts = {};
+    filtered.forEach(d => {
+        const active = CONDITIONS
+            .filter(c => d[c.key] === c.activeVal)
+            .map(c => c.key);
+
+        // Retained your strict rule: Only show combinations where 2+ conditions co-occur
+        if (active.length < 2) return;
+
+        const key = active.sort().join('|');
+        if (!comboCounts[key]) {
+            comboCounts[key] = {
+                key, active,
+                total: 0, low: 0, moderate: 0, high: 0
+            };
+        }
+        comboCounts[key].total++;
+        const r = d.CHD_FINAL_CATEGORISATION;
+        if (r === 'Low Risk')           comboCounts[key].low++;
+        else if (r === 'Moderate Risk') comboCounts[key].moderate++;
+        else if (r === 'High Risk')     comboCounts[key].high++;
+    });
+
+    const combos = Object.values(comboCounts)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 15);
+
+    if (!combos.length) {
+        el.innerHTML = `
+            <div class="chart-loading text-muted">
+                <i class="bi bi-info-circle me-2"></i>
+                No multimorbidity combinations found for <b>${riskFilter}</b>.
+            </div>`;
+        return;
+    }
+
+    // ── Condition set sizes (based on filtered data) ─
+    const conditionCounts = {};
+    CONDITIONS.forEach(c => {
+        conditionCounts[c.key] = filtered.filter(d => d[c.key] === c.activeVal).length;
+    });
+
+    // ── Layout dimensions ────────────────────────
+    const W          = el.clientWidth || 900;
+    const matrixCols = combos.length;
+    const colW       = Math.max(36, Math.min(52, (W - 220) / matrixCols));
+    const rowH       = 38;
+    const barMaxH    = 180;
+    const leftBarW   = 120;
+    const leftPad    = 200;
+    const topPad     = barMaxH + 28;
+    const matrixH    = CONDITIONS.length * rowH;
+    const bottomPad  = 40;
+    const H          = topPad + matrixH + bottomPad;
+    const totalW     = leftPad + matrixCols * colW + leftBarW + 40;
+
+    const svg = d3.select(el).append('svg')
+        .attr('viewBox', `0 0 ${totalW} ${H}`)
+        .attr('width', '100%')
+        .attr('height', H)
+        .style('font-family', 'Inter, sans-serif');
+
+    const maxTotal = d3.max(combos, d => d.total);
+    const yBar = d3.scaleLinear()
+        .domain([0, maxTotal])
+        .range([barMaxH, 0]);
+
+    // ── Determine bar fill based on slicer ───────
+    const getRiskFill = risk => {
+        if (riskFilter === 'All')           return null; // stacked
+        if (riskFilter === 'Low Risk')      return COLORS.low;
+        if (riskFilter === 'Moderate Risk') return COLORS.moderate;
+        if (riskFilter === 'High Risk')     return COLORS.high;
+        return COLORS.primary;
+    };
+    const singleFill = getRiskFill(riskFilter);
+
+    // ── Draw top bars ────────────────────────────
+    combos.forEach((combo, i) => {
+        const cx = leftPad + i * colW + colW / 2;
+        const bw = colW * 0.6;
+        const bx = cx - bw / 2;
+
+        const tipHtml =
+            `<b>${combo.active.map(k => CONDITIONS.find(c=>c.key===k)?.label||k).join(' + ')}</b><br>
+             Total: <b>${combo.total}</b><br>
+             🟢 Low: ${combo.low}<br>
+             🟡 Moderate: ${combo.moderate}<br>
+             🔴 High: ${combo.high}`;
+
+        if (singleFill) {
+            svg.append('rect')
+               .attr('x', bx)
+               .attr('y', yBar(combo.total))
+               .attr('width', bw)
+               .attr('height', barMaxH - yBar(combo.total))
+               .attr('fill', singleFill)
+               .attr('rx', 4)
+               .style('cursor', 'pointer')
+               .on('mouseover', e => showTip(tipHtml, e))
+               .on('mousemove', e => showTip(tipHtml, e))
+               .on('mouseout', hideTip);
+        } else {
+            const segments = [
+                { val: combo.low,      fill: COLORS.low      },
+                { val: combo.moderate, fill: COLORS.moderate },
+                { val: combo.high,     fill: COLORS.high     },
+            ];
+            let cumY = barMaxH;
+            segments.forEach(seg => {
+                if (!seg.val) return;
+                const segH = barMaxH - yBar(seg.val);
+                cumY -= segH;
+                svg.append('rect')
+                   .attr('x', bx).attr('y', cumY)
+                   .attr('width', bw).attr('height', segH)
+                   .attr('fill', seg.fill)
+                   .style('cursor', 'pointer')
+                   .on('mouseover', e => showTip(tipHtml, e))
+                   .on('mousemove', e => showTip(tipHtml, e))
+                   .on('mouseout', hideTip);
+            });
+            svg.append('rect')
+               .attr('x', bx)
+               .attr('y', yBar(combo.total))
+               .attr('width', bw).attr('height', 6)
+               .attr('rx', 4)
+               .attr('fill', COLORS.high)
+               .style('pointer-events', 'none');
+        }
+
+        svg.append('text')
+           .attr('x', cx)
+           .attr('y', yBar(combo.total) - 5)
+           .attr('text-anchor', 'middle')
+           .style('font-size', '9px')
+           .style('font-weight', '700')
+           .style('fill', '#2D3748')
+           .text(combo.total);
+    });
+
+    // Y axis
+    svg.append('g')
+       .attr('transform', `translate(${leftPad},0)`)
+       .call(d3.axisLeft(yBar).ticks(5).tickFormat(d3.format('d')))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('line').style('stroke', COLORS.border))
+       .call(g => g.selectAll('text').style('font-size', '9px').style('fill', COLORS.muted));
+
+    svg.append('text')
+       .attr('transform', `translate(${leftPad-44},${barMaxH/2}) rotate(-90)`)
+       .attr('text-anchor', 'middle')
+       .style('font-size', '9px')
+       .style('fill', COLORS.muted)
+       .text('Patient Count');
+
+    // ── Matrix background rows ──────────────────────────────
+    const matrixTop = topPad;
+
+    CONDITIONS.forEach((_, ri) => {
+        svg.append('rect')
+           .attr('x', leftPad)
+           .attr('y', matrixTop + ri * rowH)
+           .attr('width', matrixCols * colW)
+           .attr('height', rowH)
+           .attr('fill', ri % 2 === 0 ? '#F7FAFC' : 'white')
+           .attr('opacity', 0.7);
+    });
+
+    // Vertical grid lines
+    combos.forEach((_, i) => {
+        svg.append('line')
+           .attr('x1', leftPad + i * colW)
+           .attr('x2', leftPad + i * colW)
+           .attr('y1', matrixTop)
+           .attr('y2', matrixTop + matrixH)
+           .style('stroke', COLORS.border)
+           .style('stroke-width', 0.5);
+    });
+
+    svg.append('line')
+       .attr('x1', leftPad)
+       .attr('x2', leftPad + matrixCols * colW)
+       .attr('y1', matrixTop).attr('y2', matrixTop)
+       .style('stroke', COLORS.border)
+       .style('stroke-width', 1.5);
+
+    // ── Dots + connecting lines ──────────────────
+    combos.forEach((combo, i) => {
+        const cx = leftPad + i * colW + colW / 2;
+
+        const activeRows = combo.active
+            .map(k => CONDITIONS.findIndex(c => c.key === k))
+            .filter(r => r >= 0).sort();
+
+        if (activeRows.length >= 2) {
+            svg.append('line')
+               .attr('x1', cx).attr('x2', cx)
+               .attr('y1', matrixTop + activeRows[0]*rowH + rowH/2)
+               .attr('y2', matrixTop + activeRows[activeRows.length-1]*rowH + rowH/2)
+               .style('stroke', '#4A90D9')
+               .style('stroke-width', 2.5)
+               .style('pointer-events', 'none');
+        }
+
+        CONDITIONS.forEach((cond, ri) => {
+            const cy       = matrixTop + ri * rowH + rowH / 2;
+            const isActive = combo.active.includes(cond.key);
+
+            svg.append('circle')
+               .attr('cx', cx).attr('cy', cy).attr('r', 10)
+               .attr('fill', isActive ? cond.color : '#E2E8F0')
+               .attr('stroke', isActive ? 'white' : COLORS.border)
+               .attr('stroke-width', isActive ? 2 : 1)
+               .style('cursor', isActive ? 'pointer' : 'default')
+               .on('mouseover', isActive ? event => { showTip(tipHtml, event); } : null)
+               .on('mousemove', isActive ? event => { showTip(tipHtml, event); } : null)
+               .on('mouseout', hideTip);
+        });
+    });
+
+    // ── Condition labels (left side) ──────────────────
+    CONDITIONS.forEach((cond, ri) => {
+        const cy = matrixTop + ri * rowH + rowH / 2;
+        svg.append('circle')
+           .attr('cx', leftPad - 16).attr('cy', cy)
+           .attr('r', 6).attr('fill', cond.color); // 🟢 Automatically scales to match chdColor
+        svg.append('text')
+           .attr('x', leftPad - 26).attr('y', cy + 4)
+           .attr('text-anchor', 'end')
+           .style('font-size', '10px')
+           .style('font-weight', '600')
+           .style('fill', '#2D3748')
+           .text(cond.label);
+    });
+
+    // ── Set size bars (right panel) ────────────────────
+    const leftBarStart = leftPad + matrixCols * colW + 20;
+    const maxSetSize   = Math.max(...Object.values(conditionCounts), 1);
+    const xSetBar = d3.scaleLinear().domain([0, maxSetSize]).range([0, leftBarW]);
+
+    svg.append('text')
+       .attr('x', leftBarStart + leftBarW / 2)
+       .attr('y', matrixTop - 8)
+       .attr('text-anchor', 'middle')
+       .style('font-size', '9px')
+       .style('fill', COLORS.muted)
+       .text('Set Size');
+
+    CONDITIONS.forEach((cond, ri) => {
+        const cy    = matrixTop + ri * rowH;
+        const count = conditionCounts[cond.key] || 0;
+        const bLen  = xSetBar(count);
+
+        svg.append('rect')
+           .attr('x', leftBarStart)
+           .attr('y', cy + rowH * 0.2)
+           .attr('width', bLen)
+           .attr('height', rowH * 0.6)
+           .attr('fill', cond.color) // 🟢 Automatically updates background size bar color
+           .attr('opacity', 0.7)
+           .attr('rx', 3)
+           .style('cursor', 'pointer')
+           .on('mouseover', e => showTip(
+               `<b>${cond.label}</b><br>Patients with condition:<br><b>${count.toLocaleString()}</b>`, e
+           ))
+           .on('mousemove', e => showTip(
+               `<b>${cond.label}</b><br>Patients with condition:<br><b>${count.toLocaleString()}</b>`, e
+           ))
+           .on('mouseout', hideTip);
+
+        svg.append('text')
+           .attr('x', leftBarStart + bLen + 4)
+           .attr('y', cy + rowH * 0.62)
+           .style('font-size', '9px')
+           .style('fill', COLORS.muted)
+           .text(count.toLocaleString());
+    });
+
+    // ── Legend panel ───────────────────────────────────
+    const legY = H - 18;
+    const items = [
+        { label: 'Low Risk',      fill: COLORS.low      },
+        { label: 'Moderate Risk', fill: COLORS.moderate },
+        { label: 'High Risk',     fill: COLORS.high     },
+        { label: 'No condition',  fill: '#E2E8F0'       },
+    ];
+    items.forEach((item, i) => {
+        svg.append('rect')
+           .attr('x', leftPad + i * 120)
+           .attr('y', legY - 10)
+           .attr('width', 10).attr('height', 10)
+           .attr('rx', 2).attr('fill', item.fill);
+        svg.append('text')
+           .attr('x', leftPad + i * 120 + 14)
+           .attr('y', legY)
+           .style('font-size', '9px')
+           .style('fill', COLORS.muted)
+           .text(item.label);
+    });
+}
+
+// ================================================
+// 8. Cholesterol Box Plots
+// ================================================
+function drawCholesterol(data) {
+    const el = document.getElementById('chol-chart');
+    el.innerHTML = '';
+    const W  = el.clientWidth || 700;
+    const H  = 300;
+    const margin = {top:20,right:20,bottom:60,left:55};
+    const iW = W - margin.left - margin.right;
+    const iH = H - margin.top  - margin.bottom;
+
+    const svg = d3.select(el).append('svg')
+        .attr('width',W).attr('height',H)
+        .append('g')
+        .attr('transform',
+              `translate(${margin.left},${margin.top})`);
+
+    const markers = ['TC','LDL','HDL'];
+    const risks   = ['Low Risk','Moderate Risk','High Risk'];
+    const groups  = [];
+
+    markers.forEach(m => {
+        risks.forEach(r => {
+            const vals = data
+                .filter(d => d.CHD_FINAL_CATEGORISATION === r)
+                .map(d => +d[m])
+                .filter(v => !isNaN(v))
+                .sort(d3.ascending);
+            if (!vals.length) return;
+            const q1  = d3.quantile(vals, 0.25);
+            const med = d3.quantile(vals, 0.5);
+            const q3  = d3.quantile(vals, 0.75);
+            const iqr = q3 - q1;
+            groups.push({
+                marker: m,
+                risk: r,
+                q1, med, q3,
+                min: Math.max(d3.min(vals), q1 - 1.5*iqr),
+                max: Math.min(d3.max(vals), q3 + 1.5*iqr),
+                label: `${m} · ${r}`
+            });
+        });
+    });
+
+    const x0 = d3.scaleBand()
+        .domain(markers).range([0,iW]).padding(0.25);
+    const x1 = d3.scaleBand()
+        .domain(risks).range([0, x0.bandwidth()]).padding(0.1);
+    const y  = d3.scaleLinear()
+        .domain([0, d3.max(groups, d=>d.max)+0.5])
+        .nice().range([iH,0]);
+
+    svg.append('g').call(
+        d3.axisLeft(y).ticks(6)
+    ).call(g => g.select('.domain').remove())
+     .call(g => g.selectAll('line')
+                 .style('stroke',COLORS.border))
+     .call(g => g.selectAll('text')
+                 .style('font-size','0.72rem')
+                 .style('fill',COLORS.muted));
+
+    svg.append('g').attr('transform',`translate(0,${iH})`)
+       .call(d3.axisBottom(x0))
+       .call(g => g.select('.domain').remove())
+       .call(g => g.selectAll('text')
+                   .style('font-size','0.82rem')
+                   .style('font-weight','600')
+                   .style('fill','#2D3748'));
+
+    // Y label
+    svg.append('text')
+       .attr('transform','rotate(-90)')
+       .attr('x', -iH/2).attr('y',-42)
+       .attr('text-anchor','middle')
+       .style('font-size','0.72rem')
+       .style('fill',COLORS.muted)
+       .text('mmol/L');
+
+    markers.forEach(m => {
+        const mGroups = groups.filter(g => g.marker === m);
+        mGroups.forEach(g => {
+            const cx = x0(m) + x1(g.risk) + x1.bandwidth()/2;
+            const bw = x1.bandwidth();
+            const col= RISK_COLOR(g.risk);
+
+            // Whisker line
+            svg.append('line')
+               .attr('x1',cx).attr('x2',cx)
+               .attr('y1',y(g.min)).attr('y2',y(g.max))
+               .attr('stroke',col).attr('stroke-width',1.5)
+               .attr('stroke-dasharray','3,2');
+
+            // Box
+            svg.append('rect')
+               .attr('x', cx - bw/2)
+               .attr('y', y(g.q3))
+               .attr('width', bw)
+               .attr('height', y(g.q1)-y(g.q3))
+               .attr('fill', col)
+               .attr('opacity', 0.25)
+               .attr('rx', 3)
+               .attr('stroke', col)
+               .attr('stroke-width', 1.5);
+
+            // Median line
+            svg.append('line')
+               .attr('x1', cx - bw/2)
+               .attr('x2', cx + bw/2)
+               .attr('y1', y(g.med)).attr('y2', y(g.med))
+               .attr('stroke', col)
+               .attr('stroke-width', 2.5);
+
+            // Whisker caps
+            [g.min, g.max].forEach(v => {
+                svg.append('line')
+                   .attr('x1', cx-bw/4).attr('x2', cx+bw/4)
+                   .attr('y1', y(v)).attr('y2', y(v))
+                   .attr('stroke', col).attr('stroke-width', 1.5);
+            });
+
+            // Hover rect
+            svg.append('rect')
+               .attr('x', cx-bw/2)
+               .attr('y', y(g.max))
+               .attr('width', bw)
+               .attr('height', y(g.min)-y(g.max))
+               .attr('fill','transparent')
+               .style('cursor','pointer')
+               .on('mouseover', event => {
+                   showTip(
+                       `<b>${g.marker} · ${g.risk}</b><br>
+                        Max: ${g.max.toFixed(2)}<br>
+                        Q3: ${g.q3.toFixed(2)}<br>
+                        Median: ${g.med.toFixed(2)}<br>
+                        Q1: ${g.q1.toFixed(2)}<br>
+                        Min: ${g.min.toFixed(2)}`,
+                       event
+                   );
+               })
+               .on('mousemove', event => {
+                   showTip(
+                       `<b>${g.marker} · ${g.risk}</b><br>
+                        Max: ${g.max.toFixed(2)}<br>
+                        Q3: ${g.q3.toFixed(2)}<br>
+                        Median: ${g.med.toFixed(2)}<br>
+                        Q1: ${g.q1.toFixed(2)}<br>
+                        Min: ${g.min.toFixed(2)}`,
+                       event
+                   );
+               })
+               .on('mouseout', hideTip);
+        });
+    });
+
+    // Legend
+    const leg = svg.append('g')
+        .attr('transform',`translate(${iW/2-120},${iH+38})`);
+    risks.forEach((r,i) => {
+        leg.append('rect')
+           .attr('x',i*110).attr('width',10).attr('height',10)
+           .attr('rx',2).attr('fill',RISK_COLOR(r));
+        leg.append('text')
+           .attr('x',i*110+14).attr('y',9)
+           .style('font-size','0.72rem')
+           .style('fill',COLORS.muted)
+           .text(r);
+    });
+}
+</script>
+{% endblock %}

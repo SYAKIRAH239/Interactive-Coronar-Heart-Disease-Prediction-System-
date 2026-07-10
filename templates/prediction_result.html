@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}Prediction Result — Heartfy{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Pure, clean CSS. No Jinja tags here to confuse your editor */
+    .pb-low-fill  { background: #38A169; }
+    .pb-mod-fill  { background: #D69E2E; }
+    .pb-high-fill { background: #E53E3E; }
+    
+    .advice-box-low  { background-color: #C6F6D518; }
+    .advice-box-mod  { background-color: #FEFCBF18; }
+    .advice-box-high { background-color: #FED7D718; }
+
+    .advice-text-low  { color: #38A169; }
+    .advice-text-mod  { color: #D69E2E; }
+    .advice-text-high { color: #E53E3E; }
+
+    .text-confidence-low  { color: #38A169; }
+    .text-confidence-mod  { color: #D69E2E; }
+    .text-confidence-high { color: #E53E3E; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if from_history is defined and from_history %}
+<div class="mb-3">
+    <a href="{{ url_for('patient.history') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to History
+    </a>
+</div>
+{% endif %}
+
+<div class="page-header">
+    <h4>
+        <i class="bi bi-heart-pulse-fill me-2" style="color:var(--primary);"></i>Prediction Result
+    </h4>
+    <p>CHD risk assessment for <strong>{{ patient.name }}</strong></p>
+</div>
+
+<div class="row g-4" id="riskRow">
+
+    <div class="col-md-5">
+        <div class="card p-4 text-center h-100">
+
+            <div class="mb-3">
+                {% if result.prediction == 0 %}
+                    <div style="width:90px;height:90px; border-radius:50%;background:#C6F6D5; display:flex;align-items:center; justify-content:center;margin:0 auto;">
+                        <i class="bi bi-shield-check" style="font-size:2.5rem;color:#38A169;"></i>
+                    </div>
+                {% elif result.prediction == 1 %}
+                    <div style="width:90px;height:90px; border-radius:50%;background:#FEFCBF; display:flex;align-items:center; justify-content:center;margin:0 auto;">
+                        <i class="bi bi-exclamation-circle" style="font-size:2.5rem;color:#D69E2E;"></i>
+                    </div>
+                {% else %}
+                    <div style="width:90px;height:90px; border-radius:50%;background:#FED7D7; display:flex;align-items:center; justify-content:center;margin:0 auto;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size:2.5rem;color:#E53E3E;"></i>
+                    </div>
+                {% endif %}
+            </div>
+
+            <h5 class="fw-bold mb-1">CHD Risk Assessment</h5>
+            <p class="text-muted small mb-3">Stacked Ensemble Model Prediction</p>
+
+            <div class="mb-3">
+                {% if result.prediction == 0 %}
+                    <span class="badge-low" style="font-size:1rem;padding:10px 24px;">{{ result.label }}</span>
+                {% elif result.prediction == 1 %}
+                    <span class="badge-moderate" style="font-size:1rem;padding:10px 24px;">{{ result.label }}</span>
+                {% else %}
+                    <span class="badge-high" style="font-size:1rem;padding:10px 24px;">{{ result.label }}</span>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <p class="text-muted small mb-1">Model Confidence</p>
+                <h3 class="fw-bold mb-0 {% if result.prediction == 0 %}text-confidence-low{% elif result.prediction == 1 %}text-confidence-mod{% else %}text-confidence-high{% endif %}">
+                    {% if result.confidence %}
+                        {{ result.confidence }}%
+                    {% else %}
+                        {{ [result.prob_low, result.prob_moderate, result.prob_high]|max }}%
+                    {% endif %}
+                </h3>
+            </div>
+
+            <div class="text-start">
+                <p class="text-muted small fw-semibold mb-2">RISK PROBABILITIES</p>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Low Risk</span>
+                        <span class="fw-semibold">{{ result.prob_low }}%</span>
+                    </div>
+                    <div class="progress" style="height:8px;border-radius:4px;">
+                        <div id="barLow" class="progress-bar pb-low-fill" data-width="{{ result.prob_low }}"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Moderate Risk</span>
+                        <span class="fw-semibold">{{ result.prob_moderate }}%</span>
+                    </div>
+                    <div class="progress" style="height:8px;border-radius:4px;">
+                        <div id="barMod" class="progress-bar pb-mod-fill" data-width="{{ result.prob_moderate }}"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>High Risk</span>
+                        <span class="fw-semibold">{{ result.prob_high }}%</span>
+                    </div>
+                    <div class="progress" style="height:8px;border-radius:4px;">
+                        <div id="barHigh" class="progress-bar pb-high-fill" data-width="{{ result.prob_high }}"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card p-4 h-100">
+            <h6 class="fw-bold mb-4" style="color:var(--text-muted); text-transform:uppercase; font-size:0.78rem;letter-spacing:0.8px;">
+                PATIENT SUMMARY
+            </h6>
+
+            <div class="row g-3">
+                {% set gender_label = 'Male' if patient.gender == 0 else 'Female' %}
+                {% set smoking_label = {0:'Non-Smoker', 1:'Ex-Smoker', 2:'Current Smoker'} %}
+                {% set binary_label = {0:'No', 1:'Yes'} %}
+
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Name</p>
+                    <p class="fw-semibold mb-0">{{ patient.name }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Age / Gender</p>
+                    <p class="fw-semibold mb-0">{{ patient.age }} / {{ gender_label }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">BMI</p>
+                    <p class="fw-semibold mb-0">{{ patient.bmi }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Waist Circumference</p>
+                    <p class="fw-semibold mb-0">{{ patient.wc }} cm</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Glucose</p>
+                    <p class="fw-semibold mb-0">{{ patient.glucose }} mmol/L</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Total Cholesterol</p>
+                    <p class="fw-semibold mb-0">{{ patient.tc }} mmol/L</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">HDL / LDL</p>
+                    <p class="fw-semibold mb-0">{{ patient.hdl }} / {{ patient.ldl }} mmol/L</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Triglyceride</p>
+                    <p class="fw-semibold mb-0">{{ patient.tg }} mmol/L</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Systolic BP</p>
+                    <p class="fw-semibold mb-0">{{ patient.bp_sys or '—' }} mmHg</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Diastolic BP</p>
+                    <p class="fw-semibold mb-0">{{ patient.bp_dias or '—' }} mmHg</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Smoking</p>
+                    <p class="fw-semibold mb-0">{{ smoking_label[patient.smoking] if patient.smoking in smoking_label else '—' }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Diabetes (DM)</p>
+                    <p class="fw-semibold mb-0">{{ binary_label[patient.dm] if patient.dm in binary_label else '—' }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Hypertension</p>
+                    <p class="fw-semibold mb-0">{{ binary_label[patient.hpt] if patient.hpt in binary_label else '—' }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Hypercholesterolaemia</p>
+                    <p class="fw-semibold mb-0">{{ binary_label[patient.hypercholesterolaemia] if patient.hypercholesterolaemia in binary_label else '—' }}</p>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 rounded-3 {% if result.prediction == 0 %}advice-box-low{% elif result.prediction == 1 %}advice-box-mod{% else %}advice-box-high{% endif %}">
+                <p class="fw-semibold small mb-1 {% if result.prediction == 0 %}advice-text-low{% elif result.prediction == 1 %}advice-text-mod{% else %}advice-text-high{% endif %}">
+                    <i class="bi bi-info-circle me-1"></i>Clinical Recommendation
+                </p>
+                {% if result.prediction == 0 %}
+                    <p class="small mb-0 text-muted">Patient shows low CHD risk. Continue routine monitoring, encourage healthy lifestyle habits and annual checkups.</p>
+                {% elif result.prediction == 1 %}
+                    <p class="small mb-0 text-muted">Patient shows moderate CHD risk. Consider lifestyle intervention, closer monitoring of cholesterol and blood pressure levels.</p>
+                {% else %}
+                    <p class="small mb-0 text-muted">Patient shows high CHD risk. Immediate clinical attention recommended. Consider further cardiovascular investigations and treatment.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% if result.shap_path %}
+<div class="card p-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <h6 class="fw-bold mb-0">
+            <i class="bi bi-bar-chart-steps me-2" style="color:var(--primary);"></i>Explainable AI — SHAP Analysis
+        </h6>
+    </div>
+    <p class="text-muted small mb-3">This chart shows which clinical factors most influenced the prediction for this patient.</p>
+
+    <img src="{{ url_for('static', filename=result.shap_path) }}" alt="SHAP Waterfall Plot" class="img-fluid rounded-3 mb-4" style="border:1px solid var(--border);"/>
+
+    <div class="p-4 rounded-3" style="background:var(--primary-light); border:1px solid var(--border);">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:32px;height:32px;border-radius:8px; background:var(--primary);display:flex; align-items:center;justify-content:center;">
+                <i class="bi bi-stars" style="color:white;font-size:0.9rem;"></i>
+            </div>
+            <div>
+                <p class="fw-bold mb-0" style="font-size:0.9rem;">AI Clinical Explanation</p>
+                <p class="text-muted mb-0" style="font-size:0.75rem;">Powered by Google Gemini</p>
+            </div>
+            <div id="geminiSpinner" class="ms-auto">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="text-muted small ms-1">Generating explanation...</span>
+            </div>
+        </div>
+
+        <div id="geminiExplanation" style="display:none;">
+            <p class="mb-0" style="font-size:0.88rem;line-height:1.7; color:var(--text-dark);" id="geminiText"></p>
+        </div>
+
+        <div id="geminiError" style="display:none;">
+            <p class="text-muted small mb-0">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                <span id="geminiErrorText">Could not generate explanation.</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex gap-3 mt-4 flex-wrap">
+    <a href="{{ url_for('patient.scenario', patient_id=patient.patient_id) }}" class="btn btn-primary px-4">
+        <i class="bi bi-sliders me-2"></i>Scenario Analysis
+    </a>
+    {% if prediction_id is defined and prediction_id %}
+    <a href="{{ url_for('patient.download_pdf', prediction_id=prediction_id) }}" class="btn btn-success px-4">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
+    </a>
+    {% endif %}
+    <a href="{{ url_for('patient.new_patient') }}" class="btn btn-outline-primary px-4">
+        <i class="bi bi-person-plus me-2"></i>New Patient
+    </a>
+    <a href="{{ url_for('patient.patient_list') }}" class="btn btn-outline-secondary px-4">
+        <i class="bi bi-people me-2"></i>Patient List
+    </a>
+    <a href="{{ url_for('patient.history') }}" class="btn btn-outline-secondary px-4">
+        <i class="bi bi-clock-history me-2"></i>View History
+    </a>
+</div>
+
+<div id="geminiData" style="display:none;"
+     data-has-shap="{{ 'true' if result.shap_path else 'false' }}"
+     data-from-history="{{ 'true' if (from_history is defined and from_history) else 'false' }}"
+     data-prediction-id="{{ prediction_id if prediction_id is defined else '' }}"
+     data-gemini-explanation="{{ result.gemini_explanation | default('') | e }}">
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.addEventListener('load', function() {
+    // Dynamic styles applied programmatically to side-step validator parsing errors
+    const bLow = document.getElementById('barLow');
+    const bMod = document.getElementById('barMod');
+    const bHigh = document.getElementById('barHigh');
+    
+    if(bLow) bLow.style.width = (bLow.dataset.width || 0) + '%';
+    if(bMod) bMod.style.width = (bMod.dataset.width || 0) + '%';
+    if(bHigh) bHigh.style.width = (bHigh.dataset.width || 0) + '%';
+
+    const meta        = document.getElementById('geminiData');
+    const spinner     = document.getElementById('geminiSpinner');
+    const explanation = document.getElementById('geminiExplanation');
+    const textEl      = document.getElementById('geminiText');
+    const errorEl     = document.getElementById('geminiError');
+    const errorText   = document.getElementById('geminiErrorText');
+
+    if (!meta || !spinner) return;
+
+    const hasShap      = meta.dataset.hasShap      === 'true';
+    const fromHistory  = meta.dataset.fromHistory  === 'true';
+    const predictionId = meta.dataset.predictionId;
+    const storedText   = meta.dataset.geminiExplanation;
+
+    if (!hasShap) return;
+
+    function showExplanation(text) {
+        spinner.style.display     = 'none';
+        textEl.textContent        = text;
+        explanation.style.display = 'block';
+    }
+
+    function showError(msg) {
+        spinner.style.display    = 'none';
+        errorText.textContent    = msg;
+        errorEl.style.display    = 'block';
+    }
+
+    if (fromHistory) {
+        if (storedText && storedText.trim() !== '') {
+            showExplanation(storedText);
+        } else {
+            showError('No AI explanation stored for this prediction.');
+        }
+        return;
+    }
+
+    if (storedText && storedText.trim() !== '') {
+        showExplanation(storedText);
+        return;
+    }
+
+    if (!predictionId) {
+        showError('No prediction ID available.');
+        return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 30000);
+
+    fetch('/predictions/' + predictionId + '/explain', {
+        signal: controller.signal
+    })
+    .then(r => r.json())
+    .then(data => {
+        clearTimeout(timeoutId);
+        if (data.success) {
+            showExplanation(data.explanation);
+        } else {
+            showError(data.error || 'Could not generate explanation.');
+        }
+    })
+    .catch(err => {
+        clearTimeout(timeoutId);
+        showError(
+            err.name === 'AbortError'
+                ? 'Request timed out. Try refreshing.'
+                : 'Could not connect to Gemini.'
+        );
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}My Profile — Heartfy{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-person-circle me-2" style="color:var(--primary);"></i>
+                    My Profile
+                </h4>
+                <a href="{{ url_for('profile.edit_profile') }}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Profile
+                </a>
+            </div>
+
+            <!-- Profile Card -->
+            <div class="card p-4 mb-4">
+                <div class="row align-items-center">
+
+                    <!-- Profile Image -->
+                    <div class="col-md-3 text-center mb-3 mb-md-0">
+                        <img src="{{ url_for('static', filename='images/uploads/' + (doctor.profile_image or 'default_profile.png')) }}"
+                             alt="Profile"
+                             class="rounded-circle"
+                             style="width:120px; height:120px; object-fit:cover;
+                                    border: 4px solid var(--primary-light);">
+                    </div>
+
+                    <!-- Basic Info -->
+                    <div class="col-md-9">
+                        <h5 class="fw-bold mb-1">
+                            {{ doctor.full_name if doctor.full_name else doctor.username }}
+                        </h5>
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-hospital me-1"></i>
+                            {{ doctor.specialization if doctor.specialization else 'Specialization not set' }}
+                            {% if doctor.hospital %}
+                                · {{ doctor.hospital }}
+                            {% endif %}
+                        </p>
+                        <span class="badge rounded-pill px-3 py-2"
+                              style="background-color:var(--primary-light);
+                                     color:var(--primary); font-size:0.8rem;">
+                            <i class="bi bi-shield-check me-1"></i>Medical Professional
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Card -->
+            <div class="card p-4">
+                <h6 class="fw-bold mb-4" style="color:var(--text-muted);">
+                    ACCOUNT DETAILS
+                </h6>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-person me-1"></i>Username
+                            </p>
+                            <p class="fw-semibold mb-0">{{ doctor.username }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-envelope me-1"></i>Email
+                            </p>
+                            <p class="fw-semibold mb-0">{{ doctor.email }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-telephone me-1"></i>Phone Number
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ doctor.phone_number if doctor.phone_number else '—' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-hospital me-1"></i>Hospital
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ doctor.hospital if doctor.hospital else '—' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-award me-1"></i>Specialization
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ doctor.specialization if doctor.specialization else '—' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background:var(--soft-bg);">
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-calendar me-1"></i>Member Since
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ doctor.created_at.strftime('%d %B %Y') }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

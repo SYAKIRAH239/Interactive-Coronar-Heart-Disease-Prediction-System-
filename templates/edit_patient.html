@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block title %}Edit Patient — Heartfy{% endblock %}
+
+{% block content %}
+
+{% set gender_map  = {0: 'Male',        1: 'Female'} %}
+{% set smoking_map = {0: 'Non-Smoker',  1: 'Ex-Smoker',
+                      2: 'Current Smoker'} %}
+{% set binary_map  = {0: 'No',          1: 'Yes'} %}
+
+<div class="page-header">
+    <div class="d-flex align-items-center gap-3 mb-1">
+        <a href="{{ url_for('patient.patient_list') }}"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="fw-bold mb-0">
+            <i class="bi bi-person-gear me-2"
+               style="color:var(--primary);"></i>Edit Patient
+        </h4>
+    </div>
+    <p class="text-muted ms-5">
+        Update clinical information for
+        <strong>{{ patient.name }}</strong>
+    </p>
+</div>
+
+<form method="POST"
+      action="{{ url_for('patient.edit_patient',
+                patient_id=patient.patient_id) }}">
+<div class="row g-4">
+
+    <!-- SECTION 1: Basic Info -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                       text-transform:uppercase;
+                       font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-person me-2"
+                   style="color:var(--primary);"></i>
+                Basic Information
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Patient Name
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="name"
+                           class="form-control"
+                           value="{{ patient.name }}"
+                           required/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Gender
+                        <span class="text-danger">*</span>
+                    </label>
+                    <select name="GENDER" class="form-select"
+                            required>
+                        <option value="Male"
+                            {{ 'selected' if patient.gender == 0 }}>
+                            Male
+                        </option>
+                        <option value="Female"
+                            {{ 'selected' if patient.gender == 1 }}>
+                            Female
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Age <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="AGE"
+                           class="form-control"
+                           value="{{ patient.age }}"
+                           min="1" max="120" required/>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: Physical Measurements -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                       text-transform:uppercase;
+                       font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-rulers me-2"
+                   style="color:var(--primary);"></i>
+                Physical Measurements
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Weight (kg)
+                    </label>
+                    <input type="number" name="weight"
+                           id="weight" class="form-control"
+                           value="{{ patient.weight }}"
+                           step="0.1"
+                           oninput="calcBMI()"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Height (cm)
+                    </label>
+                    <input type="number" name="height"
+                           id="height" class="form-control"
+                           value="{{ patient.height }}"
+                           step="0.1"
+                           oninput="calcBMI()"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        BMI
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="BMI"
+                           id="bmi" class="form-control"
+                           value="{{ patient.bmi }}"
+                           step="0.01" required/>
+                    <small class="text-muted">
+                        Auto-fills from weight & height
+                    </small>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Waist Circumference / WC (cm)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="WC"
+                           class="form-control"
+                           value="{{ patient.wc }}"
+                           step="0.1" required/>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Lab Results -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                       text-transform:uppercase;
+                       font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-droplet-fill me-2"
+                   style="color:var(--primary);"></i>
+                Blood & Lab Results
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Glucose (mmol/L)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="GLUCOSE"
+                           class="form-control"
+                           value="{{ patient.glucose }}"
+                           step="0.01" required/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Total Cholesterol / TC (mmol/L)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="TC"
+                           class="form-control"
+                           value="{{ patient.tc }}"
+                           step="0.01" required/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        Triglyceride / TG (mmol/L)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="TG"
+                           class="form-control"
+                           value="{{ patient.tg }}"
+                           step="0.01" required/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        LDL (mmol/L)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="LDL"
+                           class="form-control"
+                           value="{{ patient.ldl }}"
+                           step="0.01" required/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        HDL (mmol/L)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="HDL"
+                           class="form-control"
+                           value="{{ patient.hdl }}"
+                           step="0.01" required/>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: Lifestyle -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                       text-transform:uppercase;
+                       font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-activity me-2"
+                   style="color:var(--primary);"></i>
+                Lifestyle Factors
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Smoking Status
+                        <span class="text-danger">*</span>
+                    </label>
+                    <select name="SMOKING" class="form-select"
+                            required>
+                        <option value="Non-Smoker"
+                            {{ 'selected' if patient.smoking == 0 }}>
+                            Non-Smoker
+                        </option>
+                        <option value="Ex-Smoker"
+                            {{ 'selected' if patient.smoking == 1 }}>
+                            Ex-Smoker
+                        </option>
+                        <option value="Current Smoker"
+                            {{ 'selected' if patient.smoking == 2 }}>
+                            Current Smoker
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Alcohol Consumption
+                        <span class="text-danger">*</span>
+                    </label>
+                    <select name="ALCOHOL" class="form-select"
+                            required>
+                        <option value="No"
+                            {{ 'selected' if patient.alcohol == 0 }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if patient.alcohol == 1 }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 5: Medical History -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                       text-transform:uppercase;
+                       font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-clipboard2-pulse me-2"
+                   style="color:var(--primary);"></i>
+                Medical History
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Hypercholesterolaemia
+                    </label>
+                    <select name="HYPERCHOLESTEROLAEMIA"
+                            class="form-select">
+                        <option value="No"
+                            {{ 'selected' if
+                               patient.hypercholesterolaemia == 0 }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if
+                               patient.hypercholesterolaemia == 1 }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Diabetes Mellitus (DM)
+                    </label>
+                    <select name="DM" class="form-select">
+                        <option value="No"
+                            {{ 'selected' if patient.dm == 0 }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if patient.dm == 1 }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Hypertension (HPT)
+                    </label>
+                    <select name="HPT" class="form-select">
+                        <option value="No"
+                            {{ 'selected' if patient.hpt == 0 }}>
+                            No
+                        </option>
+                        <option value="Yes"
+                            {{ 'selected' if patient.hpt == 1 }}>
+                            Yes
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 6: Blood Pressure -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h6 class="fw-bold mb-4"
+                style="color:var(--text-muted);
+                    text-transform:uppercase;
+                    font-size:0.78rem;letter-spacing:0.8px;">
+                <i class="bi bi-activity me-2"
+                style="color:var(--primary);"></i>
+                Blood Pressure
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Systolic BP / BP_SYS (mmHg)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="BP_SYS"
+                        class="form-control"
+                        value="{{ patient.bp_sys or '' }}"
+                        placeholder="e.g. 120"
+                        min="60" max="250" required/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        Diastolic BP / BP_DIAS (mmHg)
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" name="BP_DIAS"
+                        class="form-control"
+                        value="{{ patient.bp_dias or '' }}"
+                        placeholder="e.g. 80"
+                        min="40" max="150" required/>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="col-12 d-flex gap-3">
+        <button type="submit" class="btn btn-primary px-5 py-2">
+            <i class="bi bi-check-circle me-2"></i>Save Changes
+        </button>
+        <a href="{{ url_for('patient.patient_list') }}"
+           class="btn btn-outline-secondary px-4 py-2">
+            Cancel
+        </a>
+    </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function calcBMI() {
+    const weight = parseFloat(
+        document.querySelector('[name="weight"]').value);
+    const height = parseFloat(
+        document.querySelector('[name="height"]').value);
+    if (weight > 0 && height > 0) {
+        const bmi = (weight / Math.pow(height / 100, 2)).toFixed(2);
+        document.getElementById('bmi').value = bmi;
+    }
+}
+</script>
+{% endblock %}
